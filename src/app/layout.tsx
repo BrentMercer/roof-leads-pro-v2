@@ -26,15 +26,22 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <Providers session={session}>
-          <div className="min-h-screen">
-            <main>
-              {children}
-            </main>
-            <ThemeToggle />
-          </div>
-        </Providers>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Providers session={session}>
+            <div className="min-h-screen">
+              <main>
+                {children}
+              </main>
+              <ThemeToggle />
+            </div>
+          </Providers>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

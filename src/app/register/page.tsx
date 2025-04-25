@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -9,20 +9,83 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { Eye, EyeOff } from 'lucide-react'
+import { Progress } from '@/components/ui/progress'
+import ReCAPTCHA from "react-google-recaptcha"
+import { Icons } from "@/components/icons"
 
-export default function Register() {
+// Password strength regex patterns
+const patterns = {
+  length: /.{8,}/,
+  uppercase: /[A-Z]/,
+  lowercase: /[a-z]/,
+  number: /\d/,
+  special: /[!@#$%^&*(),.?":{}|<>]/
+}
+
+export default function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [passwordStrength, setPasswordStrength] = useState(0)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Calculate password strength
+  const calculatePasswordStrength = (pass: string) => {
+    let strength = 0
+    let matchedPatterns = {
+      length: patterns.length.test(pass),
+      uppercase: patterns.uppercase.test(pass),
+      lowercase: patterns.lowercase.test(pass),
+      number: patterns.number.test(pass),
+      special: patterns.special.test(pass)
+    }
+    
+    // Add 20% for each matched pattern
+    Object.values(matchedPatterns).forEach(isMatched => {
+      if (isMatched) strength += 20
+    })
+
+    console.log('Password Strength Check:', {
+      strength,
+      matchedPatterns,
+      password: pass
+    })
+
+    setPasswordStrength(strength)
+    return strength // Return the strength value for immediate use
+  }
+
+  // Update password and check strength
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value
+    setPassword(newPassword)
+    calculatePasswordStrength(newPassword)
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+    const confirmPassword = formData.get("confirmPassword") as string
+    const name = formData.get("name") as string
+
+    if (!captchaToken) {
+      toast({
+        title: "Error",
+        description: "Please complete the CAPTCHA verification",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
 
     if (password !== confirmPassword) {
       toast({
@@ -35,13 +98,33 @@ export default function Register() {
     }
 
     try {
-      // Add your registration logic here
-      // For now, we'll just redirect to login
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          captchaToken
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed')
+      }
+
+      toast({
+        title: "Success",
+        description: "Registration successful! Please check your email to verify your account.",
+      })
+      
       router.push('/login')
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to create account",
+        description: error.message || 'Something went wrong',
         variant: "destructive",
       })
     } finally {
@@ -49,10 +132,18 @@ export default function Register() {
     }
   }
 
+  const handleCaptchaChange = (token: string | null) => {
+    setCaptchaToken(token)
+  }
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/50">
-      <div className="px-8 py-6 mt-4 bg-background shadow-lg rounded-lg w-full max-w-md">
-        <h3 className="text-2xl font-bold text-center">Create an account</h3>
+    <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight">
+            Create your account
+          </h2>
+        </div>
         
         <Button 
           variant="outline" 
@@ -118,27 +209,45 @@ export default function Register() {
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <div className="relative mt-2">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pr-10"
-                  disabled={isLoading}
-                  required
+              <div className="space-y-2">
+                <div className="relative mt-2">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    value={password}
+                    onChange={handlePasswordChange}
+                    className="w-full pr-10"
+                    disabled={isLoading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-500" />
+                    )}
+                  </button>
+                </div>
+                <Progress 
+                  value={passwordStrength} 
+                  className="h-2"
+                  aria-label="Password strength"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
+                <div className="text-xs text-muted-foreground">
+                  <div className="mb-2">Password Strength: {passwordStrength}%</div>
+                  Password must contain:
+                  <ul className="list-disc list-inside">
+                    <li className={patterns.length.test(password) ? "text-green-500" : ""}>At least 8 characters</li>
+                    <li className={patterns.uppercase.test(password) ? "text-green-500" : ""}>One uppercase letter</li>
+                    <li className={patterns.lowercase.test(password) ? "text-green-500" : ""}>One lowercase letter</li>
+                    <li className={patterns.number.test(password) ? "text-green-500" : ""}>One number</li>
+                    <li className={patterns.special.test(password) ? "text-green-500" : ""}>One special character (like !@#$%^&*)</li>
+                  </ul>
+                </div>
               </div>
             </div>
             <div>
@@ -154,9 +263,21 @@ export default function Register() {
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Create account'}
-            </Button>
+            <div className="grid gap-2">
+              <Button disabled={isLoading}>
+                {isLoading && (
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Register
+              </Button>
+            </div>
+            
+            <div className="mt-4 flex justify-center">
+              <ReCAPTCHA
+                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
+                onChange={handleCaptchaChange}
+              />
+            </div>
           </div>
         </form>
 

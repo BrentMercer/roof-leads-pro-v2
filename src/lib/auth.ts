@@ -1,5 +1,5 @@
-import { MongoDBAdapter } from "@next-auth/mongodb-adapter"
-import { NextAuthOptions } from "next-auth"
+import { MongoDBAdapter } from "@auth/mongodb-adapter"
+import { NextAuthOptions, DefaultSession } from "next-auth"
 import { clientPromise } from "@/lib/mongodb"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
@@ -28,6 +28,25 @@ const UserSchema = new mongoose.Schema({
 // Create or get the User model
 const User = mongoose.models.User || mongoose.model("User", UserSchema)
 
+declare module "next-auth" {
+  interface User {
+    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+  }
+  interface Session {
+    user: {
+      id: string
+      role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+    } & DefaultSession["user"]
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string
+    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
   debug: false,
@@ -49,7 +68,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            throw new Error('Invalid credentials')
+            throw new Error('Email and password are required')
           }
 
           await connectDB()
@@ -57,13 +76,17 @@ export const authOptions: NextAuthOptions = {
           const user = await User.findOne({ email: credentials.email })
 
           if (!user || !user.password) {
-            throw new Error('Invalid credentials')
+            throw new Error('No account found with this email')
           }
 
           const isValid = await bcrypt.compare(credentials.password, user.password)
 
           if (!isValid) {
-            throw new Error('Invalid credentials')
+            throw new Error('Invalid password')
+          }
+
+          if (!user.emailVerified) {
+            throw new Error('Please verify your email before logging in')
           }
 
           return {
@@ -90,7 +113,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string
+        session.user.id = token.id
         session.user.role = token.role as 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
       }
       return session
