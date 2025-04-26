@@ -7,7 +7,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { Providers } from '@/components/providers'
 import { Toaster } from "@/components/ui/toaster"
-import { headers } from 'next/headers'
+import Script from 'next/script'
+import type { ReactNode } from 'react'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -19,12 +20,21 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: ReactNode
 }) {
   const session = await getServerSession(authOptions)
-  
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {recaptchaSiteKey && (
+          <Script 
+            src={`https://www.google.com/recaptcha/enterprise.js?render=${recaptchaSiteKey}`}
+            strategy="beforeInteractive"
+          />
+        )}
+      </head>
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"

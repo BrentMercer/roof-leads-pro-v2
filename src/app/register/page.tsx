@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import * as React from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -10,8 +11,9 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { Eye, EyeOff } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
-import ReCAPTCHA from "react-google-recaptcha"
 import { Icons } from "@/components/icons"
+import { EnvCheck } from '@/components/env-check'
+import { env } from '@/lib/env'
 
 // Password strength regex patterns
 const patterns = {
@@ -36,8 +38,10 @@ export default function RegisterPage() {
 
   // Calculate password strength
   const calculatePasswordStrength = (pass: string) => {
+    if (!pass) return 0
+    
     let strength = 0
-    let matchedPatterns = {
+    const matchedPatterns = {
       length: patterns.length.test(pass),
       uppercase: patterns.uppercase.test(pass),
       lowercase: patterns.lowercase.test(pass),
@@ -50,14 +54,8 @@ export default function RegisterPage() {
       if (isMatched) strength += 20
     })
 
-    console.log('Password Strength Check:', {
-      strength,
-      matchedPatterns,
-      password: pass
-    })
-
     setPasswordStrength(strength)
-    return strength // Return the strength value for immediate use
+    return strength
   }
 
   // Update password and check strength
@@ -67,37 +65,71 @@ export default function RegisterPage() {
     calculatePasswordStrength(newPassword)
   }
 
+  useEffect(() => {
+    // Log environment variables (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Environment check:', {
+        NEXT_PUBLIC_RECAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+      })
+    }
+
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    if (!siteKey) {
+      console.error('reCAPTCHA site key is missing')
+      return
+    }
+
+    // Initialize reCAPTCHA Enterprise with error handling
+    const initRecaptcha = async () => {
+      try {
+        if (!window.grecaptcha?.enterprise) {
+          console.error('reCAPTCHA Enterprise not loaded')
+          return
+        }
+
+        await window.grecaptcha.enterprise.ready(async () => {
+          try {
+            const token = await window.grecaptcha.enterprise.execute(siteKey, { action: 'REGISTER' })
+            console.log('reCAPTCHA token generated successfully')
+            setCaptchaToken(token)
+          } catch (error) {
+            console.error('Error executing reCAPTCHA:', error)
+          }
+        })
+      } catch (error) {
+        console.error('Error initializing reCAPTCHA:', error)
+      }
+    }
+
+    initRecaptcha()
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
 
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
-    const confirmPassword = formData.get("confirmPassword") as string
-    const name = formData.get("name") as string
-
-    if (!captchaToken) {
-      toast({
-        title: "Error",
-        description: "Please complete the CAPTCHA verification",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return
-    }
-
-    if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return
-    }
-
     try {
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+      if (!siteKey) {
+        throw new Error('reCAPTCHA site key is missing')
+      }
+
+      // Get a fresh token before submission
+      const token = await window.grecaptcha.enterprise.execute(siteKey, { action: 'REGISTER' })
+
+      if (!name || !email || !password || !confirmPassword) {
+        throw new Error('All fields are required')
+      }
+
+      if (password !== confirmPassword) {
+        toast({
+          title: "Error",
+          description: "Passwords do not match",
+          variant: "destructive",
+        })
+        return
+      }
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,14 +137,14 @@ export default function RegisterPage() {
           name,
           email,
           password,
-          captchaToken
+          captchaToken: token
         })
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed')
+        throw new Error(data.error || 'Registration failed')
       }
 
       toast({
@@ -130,10 +162,6 @@ export default function RegisterPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleCaptchaChange = (token: string | null) => {
-    setCaptchaToken(token)
   }
 
   return (
@@ -272,11 +300,8 @@ export default function RegisterPage() {
               </Button>
             </div>
             
-            <div className="mt-4 flex justify-center">
-              <ReCAPTCHA
-                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
-                onChange={handleCaptchaChange}
-              />
+            <div className="mt-4 flex flex-col items-center gap-4">
+              <EnvCheck />
             </div>
           </div>
         </form>

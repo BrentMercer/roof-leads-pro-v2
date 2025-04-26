@@ -66,3 +66,7 @@ GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
 # App
 APP_NAME="RoofLeadsPro"
+
+# Google Cloud service account keys
+/config/keys/*
+!config/keys/.gitkeep
