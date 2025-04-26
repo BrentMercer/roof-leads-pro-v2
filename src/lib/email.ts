@@ -3,15 +3,27 @@ import { verificationEmailTemplate } from './email-templates'
 import { sendGHLEmail } from './ghl-api'
 import nodemailer from 'nodemailer'
 
-// Create reusable transporter object using Mailtrap SMTP settings
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_SERVER_HOST,
-  port: parseInt(process.env.EMAIL_SERVER_PORT || '2525'),
+// Debug environment variables
+const emailConfig = {
+  host: "sandbox.smtp.mailtrap.io",
+  port: 2525,
   auth: {
-    user: process.env.EMAIL_SERVER_USER,
-    pass: process.env.EMAIL_SERVER_PASSWORD,
-  },
+    user: "df467f1cf6906e",
+    pass: "717cf3d2047ea4"
+  }
+}
+
+console.log('Email Config:', {
+  host: emailConfig.host,
+  port: emailConfig.port,
+  auth: {
+    user: emailConfig.auth.user ? '[SET]' : '[NOT SET]',
+    pass: emailConfig.auth.pass ? '[SET]' : '[NOT SET]'
+  }
 })
+
+// Create reusable transporter object
+const transporter = nodemailer.createTransport(emailConfig)
 
 // Verify connection configuration
 transporter.verify(function (error, success) {
@@ -48,11 +60,15 @@ export async function sendPasswordResetEmail(email: string, token: string) {
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
+  console.log('Attempting to send verification email to:', email)
+  console.log('Using verification token:', token)
+  
   const verificationUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`
+  console.log('Verification URL:', verificationUrl)
 
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+    const info = await transporter.sendMail({
+      from: 'noreply@example.com',  // Hardcoded for testing
       to: email,
       subject: 'Verify your email address',
       html: `
@@ -63,8 +79,12 @@ export async function sendVerificationEmail(email: string, token: string) {
         </div>
       `,
     })
+
+    console.log('Verification email sent successfully:', info.messageId)
+    return true
   } catch (error) {
-    console.error('Mailtrap connection error:', error)
+    console.error('Failed to send verification email:', error)
     // Don't throw the error - we want registration to succeed even if email fails
+    return false
   }
 } 

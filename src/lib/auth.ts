@@ -40,23 +40,25 @@ const User = mongoose.models.User || mongoose.model("User", UserSchema)
 // Extend the built-in session types
 declare module "next-auth" {
   interface User {
-    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
-    remember?: boolean
+    id: string;
+    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN';
+    remember?: boolean;
   }
+  
   interface Session {
     user: {
-      id: string
-      role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
-    } & DefaultSession["user"]
-    maxAge?: number
+      id: string;
+      role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN';
+    } & DefaultSession["user"];
+    maxAge?: number;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string
-    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
-    remember?: boolean
+    id: string;
+    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN';
+    remember?: boolean;
   }
 }
 
