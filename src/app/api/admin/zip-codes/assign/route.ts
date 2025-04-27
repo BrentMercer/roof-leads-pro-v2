@@ -1,20 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
-import { Types } from 'mongoose'
-
-interface MongoUser {
-  _id: Types.ObjectId
-  name: string | null
-  email: string | null
-  role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
-  assignedZipCodes: Array<{
-    zipCode: string
-    purchaseDate: Date
-    active: boolean
-    source: 'PURCHASE' | 'ADMIN_ASSIGN' | 'GIFT'
-  }>
-}
+import { findUnique, findFirst, update } from '@/lib/models/user'
+import { User } from '@/types/user'
 
 export async function POST(req: Request) {
   try {
@@ -25,9 +12,7 @@ export async function POST(req: Request) {
     }
 
     // Check if user is super admin
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    }) as MongoUser | null
+    const currentUser = await findUnique({ email: session.user.email }) as User | null
 
     if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -45,48 +30,41 @@ export async function POST(req: Request) {
     }
 
     // Check if zip code is already assigned and active
-    const existingAssignment = await prisma.user.findFirst({
-      where: {
-        assignedZipCodes: {
-          some: {
-            zipCode: zipCode,
-            active: true
-          }
+    const existingAssignment = await findFirst({
+      'assignedZipCodes': {
+        $elemMatch: {
+          zipCode: zipCode,
+          active: true
         }
       }
-    }) as MongoUser | null
+    }) as User | null
 
     if (existingAssignment) {
       return NextResponse.json({ error: 'Zip code is already assigned to another user' }, { status: 400 })
     }
 
     // Get the user to assign the zip code to
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    }) as MongoUser | null
+    const user = await findUnique({ id: userId }) as User | null
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Assign the zip code
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
+    const updatedUser = await update({ id: userId }, {
+      $push: {
         assignedZipCodes: {
-          push: {
-            zipCode: zipCode,
-            purchaseDate: new Date(),
-            active: true,
-            source: source
-          }
+          zipCode: zipCode,
+          purchaseDate: new Date(),
+          active: true,
+          source: source
         }
       }
-    }) as MongoUser
+    }) as User
 
     // Transform the response
     return NextResponse.json({
-      id: updatedUser._id.toString(),
+      id: updatedUser._id,
       name: updatedUser.name,
       email: updatedUser.email,
       role: updatedUser.role,

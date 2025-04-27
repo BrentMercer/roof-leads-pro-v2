@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { findMany, findFirst, update } from '@/lib/models/user'
 import { superAdminMiddleware } from '@/middleware/admin'
+import type { NextRequest } from 'next/server'
+import { User } from '@/types/user'
 
 // GET /api/admin/zip-codes
 // List all zip code assignments
@@ -16,15 +18,15 @@ export async function GET() {
     }
 
     // Get all users with their zip code assignments
-    const users = await prisma.user.findMany({
+    const users = await findMany({
       select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        assignedZipCodes: true
+        _id: 1,
+        name: 1,
+        email: 1,
+        role: 1,
+        assignedZipCodes: 1
       }
-    })
+    }) as User[]
 
     return NextResponse.json({ users })
   } catch (error) {
@@ -38,10 +40,10 @@ export async function GET() {
 
 // POST /api/admin/zip-codes
 // Assign a zip code to a user
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     // Check if user is super admin
-    const middlewareResponse = await superAdminMiddleware(request as any)
+    const middlewareResponse = await superAdminMiddleware(request)
     if (middlewareResponse.status !== 200) {
       return middlewareResponse
     }
@@ -56,16 +58,14 @@ export async function POST(request: Request) {
     }
 
     // Check if zip code is already assigned to another user
-    const existingAssignment = await prisma.user.findFirst({
-      where: {
-        'assignedZipCodes': {
-          $elemMatch: {
-            zipCode,
-            active: true
-          }
+    const existingAssignment = await findFirst({
+      'assignedZipCodes': {
+        $elemMatch: {
+          zipCode,
+          active: true
         }
       }
-    })
+    }) as User | null
 
     if (existingAssignment) {
       return NextResponse.json(
@@ -75,18 +75,15 @@ export async function POST(request: Request) {
     }
 
     // Add zip code to user
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
+    const updatedUser = await update({ id: userId }, {
+      $push: {
         assignedZipCodes: {
-          $push: {
-            zipCode,
-            purchaseDate: new Date(),
-            active: true
-          }
+          zipCode,
+          purchaseDate: new Date(),
+          active: true
         }
       }
-    })
+    }) as User
 
     return NextResponse.json({ user: updatedUser })
   } catch (error) {
@@ -100,10 +97,10 @@ export async function POST(request: Request) {
 
 // DELETE /api/admin/zip-codes
 // Remove a zip code assignment
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
     // Check if user is super admin
-    const middlewareResponse = await superAdminMiddleware(request as any)
+    const middlewareResponse = await superAdminMiddleware(request)
     if (middlewareResponse.status !== 200) {
       return middlewareResponse
     }
@@ -118,16 +115,13 @@ export async function DELETE(request: Request) {
     }
 
     // Remove zip code from user
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
+    const updatedUser = await update({ id: userId }, {
+      $pull: {
         assignedZipCodes: {
-          $pull: {
-            zipCode
-          }
+          zipCode
         }
       }
-    })
+    }) as User
 
     return NextResponse.json({ user: updatedUser })
   } catch (error) {
@@ -141,10 +135,10 @@ export async function DELETE(request: Request) {
 
 // PATCH /api/admin/zip-codes
 // Deactivate a zip code assignment
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
     // Check if user is super admin
-    const middlewareResponse = await superAdminMiddleware(request as any)
+    const middlewareResponse = await superAdminMiddleware(request)
     if (middlewareResponse.status !== 200) {
       return middlewareResponse
     }
@@ -159,15 +153,14 @@ export async function PATCH(request: Request) {
     }
 
     // Deactivate zip code for user
-    const updatedUser = await prisma.user.update({
-      where: { 
-        id: userId,
-        'assignedZipCodes.zipCode': zipCode
-      },
-      data: {
+    const updatedUser = await update({ 
+      id: userId,
+      'assignedZipCodes.zipCode': zipCode
+    }, {
+      $set: {
         'assignedZipCodes.$.active': false
       }
-    })
+    }) as User
 
     return NextResponse.json({ user: updatedUser })
   } catch (error) {
