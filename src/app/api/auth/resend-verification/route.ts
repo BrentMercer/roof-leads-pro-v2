@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { findUnique, update } from '@/lib/models/user'
 import { randomBytes } from 'crypto'
 import { sendVerificationEmail } from '@/lib/email'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { logVerificationAttempt } from '@/lib/verification-logger'
+import { User } from '@/types/user'
 
 export async function POST(req: Request) {
   try {
@@ -29,10 +30,7 @@ export async function POST(req: Request) {
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { verificationToken: true }
-    })
+    const user = await findUnique({ email: session.user.email }) as User | null
 
     if (!user) {
       return NextResponse.json(
@@ -48,30 +46,27 @@ export async function POST(req: Request) {
       )
     }
 
-    // Delete existing verification token if it exists
-    if (user.verificationToken) {
-      await prisma.verificationToken.delete({
-        where: { userId: user.id }
-      })
-    }
-
     // Generate new verification token
     const token = randomBytes(32).toString('hex')
     const expires = new Date(Date.now() + 24 * 3600000) // 24 hours
 
-    // Create new verification token
-    const verificationToken = await prisma.verificationToken.create({
-      data: {
-        token,
-        expires,
-        userId: user.id
+    // Update user with new verification token
+    await update(
+      { email: session.user.email },
+      {
+        $set: {
+          verificationToken: {
+            token,
+            expires
+          }
+        }
       }
-    })
+    )
 
     await sendVerificationEmail(user.email, token)
 
     await logVerificationAttempt({
-      userId: user.id,
+      userId: user._id,
       type: 'RESEND',
       status: 'SUCCESS',
       req
