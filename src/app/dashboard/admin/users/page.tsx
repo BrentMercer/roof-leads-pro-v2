@@ -1,9 +1,11 @@
 import { Metadata } from "next"
 import { getServerSession } from "next-auth/next"
-import { prisma } from "@/lib/db"
 import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserManagement } from './user-management'
+import { connectDB } from '@/lib/mongodb'
+import { User } from '@/lib/models/user'
+import type { UserDocument } from '@/lib/types/user'
 
 export const metadata: Metadata = {
   title: "User Management | Roof Leads Pro",
@@ -11,22 +13,11 @@ export const metadata: Metadata = {
 }
 
 async function getUsers() {
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      emailVerified: true,
-      image: true,
-      assignedZipCodes: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
-  })
+  await connectDB()
+  const users = await User.find()
+    .select('name email role emailVerified image assignedZipCodes createdAt updatedAt')
+    .sort({ createdAt: -1 })
+    .lean() as UserDocument[]
   return users
 }
 
@@ -48,9 +39,10 @@ export default async function UsersPage() {
   }
 
   // Check if user is super admin
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
-  })
+  await connectDB()
+  const currentUser = await User.findOne({ 
+    email: session.user.email 
+  }).lean() as UserDocument | null
 
   if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
     return (
