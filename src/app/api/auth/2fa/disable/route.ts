@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
-import type { Prisma } from '@prisma/client'
+import { findUnique, update } from '@/lib/models/user'
+import { User } from '@/types/user'
 
 export async function POST(req: Request) {
   try {
@@ -13,15 +13,9 @@ export async function POST(req: Request) {
       )
     }
 
-    const userSelect = {
-      id: true,
-      twoFactorEnabled: true,
-    } satisfies Prisma.UserSelect
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: userSelect
-    })
+    const user = await findUnique({ 
+      email: session.user.email 
+    }) as User | null
 
     if (!user?.twoFactorEnabled) {
       return NextResponse.json(
@@ -30,13 +24,15 @@ export async function POST(req: Request) {
       )
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        twoFactorEnabled: false,
-        twoFactorSecret: null
+    await update(
+      { id: user._id },
+      {
+        $set: {
+          twoFactorEnabled: false,
+          twoFactorSecret: null
+        }
       }
-    })
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

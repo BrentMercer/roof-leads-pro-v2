@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import { authenticator } from "otplib"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { findUnique, update } from '@/lib/models/user'
+import { User } from '@/types/user'
 
 export async function POST(request: Request) {
   try {
@@ -36,9 +37,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
+    const user = await findUnique({
+      email: session.user.email
+    }) as User | null
 
     if (!user || user.tempTwoFactorSecret !== secret) {
       return NextResponse.json(
@@ -47,14 +48,16 @@ export async function POST(request: Request) {
       )
     }
 
-    await prisma.user.update({
-      where: { email: session.user.email },
-      data: {
-        twoFactorEnabled: true,
-        twoFactorSecret: secret,
-        tempTwoFactorSecret: null,
-      },
-    })
+    await update(
+      { email: session.user.email },
+      {
+        $set: {
+          twoFactorEnabled: true,
+          twoFactorSecret: secret,
+          tempTwoFactorSecret: null,
+        }
+      }
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -1,8 +1,9 @@
 import { getServerSession } from "next-auth/next"
 import { authenticator } from "otplib"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { findUnique } from '@/lib/models/user'
 import { NextResponse } from "next/server"
+import { User } from '@/types/user'
 
 export async function POST(request: Request) {
   try {
@@ -15,9 +16,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email }
-    })
+    const user = await findUnique({ email }) as User | null
 
     if (!user?.twoFactorSecret || !user.twoFactorEnabled) {
       return NextResponse.json(

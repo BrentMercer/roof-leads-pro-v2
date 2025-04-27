@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
-import type { Prisma } from '@prisma/client'
+import { findUnique } from '@/lib/models/user'
+import { User } from '@/types/user'
 
 export async function GET() {
   try {
@@ -13,15 +13,9 @@ export async function GET() {
       )
     }
 
-    const userSelect = {
-      id: true,
-      twoFactorEnabled: true
-    } satisfies Prisma.UserSelect
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: userSelect
-    })
+    const user = await findUnique({ 
+      email: session.user.email 
+    }) as User | null
 
     return NextResponse.json({
       enabled: Boolean(user?.twoFactorEnabled)

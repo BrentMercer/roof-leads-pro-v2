@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import { authenticator } from "otplib"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { update } from '@/lib/models/user'
 
 export async function POST() {
   try {
@@ -24,12 +24,14 @@ export async function POST() {
       secret
     )
 
-    await prisma.user.update({
-      where: { email: session.user.email },
-      data: { 
-        tempTwoFactorSecret: secret,
-      },
-    })
+    await update(
+      { email: session.user.email },
+      {
+        $set: { 
+          tempTwoFactorSecret: secret,
+        }
+      }
+    )
 
     return NextResponse.json({
       secret,
