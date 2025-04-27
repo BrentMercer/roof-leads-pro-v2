@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { findUnique, update } from '@/lib/models/user'
+import { User } from '@/types/user'
 
 export async function POST(
   req: Request,
@@ -16,7 +17,7 @@ export async function POST(
     }
 
     // Check if user is super admin
-    const currentUser = await findUnique({ email: session.user.email })
+    const currentUser = await findUnique({ email: session.user.email }) as User | null
 
     if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -65,7 +66,7 @@ export async function PUT(
       id: userId,
       resetToken: token,
       resetTokenExpiry: { $gt: new Date() }
-    })
+    }) as User | null
 
     if (!user) {
       return NextResponse.json({ error: 'Invalid or expired reset token' }, { status: 400 })
