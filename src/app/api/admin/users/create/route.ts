@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { User } from '@/types/user'
 
 export async function POST(req: Request) {
   try {
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { role: true }
-    })
+    }) as Pick<User, 'role'> | null
 
     if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
