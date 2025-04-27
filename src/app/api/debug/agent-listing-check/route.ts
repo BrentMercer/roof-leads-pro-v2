@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { MLSAgent, MLSListing, ListingLifecycle } from '@/lib/models/mls'
+import type { MLSAgent as MLSAgentType } from '@/lib/types/mls'
 
 const API_KEY = process.env.CRON_SECRET || 'localdev'
 
@@ -42,20 +43,25 @@ export async function GET(request: Request) {
       const agent = await MLSAgent.findOne({ 
         memberKey: listing.listAgentKey 
       })
-      .select('memberKey fullName')
-      .lean()
+      .lean() as MLSAgentType | null
       
       listingAgentChecks.push({
         listingKey: listing.listingKey,
         listAgentKey: listing.listAgentKey,
         agentFound: !!agent,
-        agentName: agent?.fullName || 'Not Found',
+        agentName: agent ? `${agent.MemberFirstName} ${agent.MemberLastName}` : 'Not Found',
         listingCity: listing.city
       })
     }
     
     // Find agents with most listings
-    const topAgents = await MLSAgent.aggregate([
+    const topAgents = await MLSAgent.aggregate<{
+      _id: unknown,
+      memberKey: string,
+      MemberFirstName: string,
+      MemberLastName: string,
+      listingCount: number
+    }>([
       {
         $lookup: {
           from: 'mlslistings',
@@ -80,7 +86,8 @@ export async function GET(request: Request) {
       {
         $project: {
           memberKey: 1,
-          fullName: 1, 
+          MemberFirstName: 1,
+          MemberLastName: 1,
           listingCount: { $size: '$listings' }
         }
       },
@@ -93,7 +100,12 @@ export async function GET(request: Request) {
     ])
     
     // Find agents with no listings
-    const agentsWithNoListings = await MLSAgent.aggregate([
+    const agentsWithNoListings = await MLSAgent.aggregate<{
+      _id: unknown,
+      memberKey: string,
+      MemberFirstName: string,
+      MemberLastName: string
+    }>([
       {
         $lookup: {
           from: 'mlslistings',
@@ -118,7 +130,8 @@ export async function GET(request: Request) {
       {
         $project: {
           memberKey: 1,
-          fullName: 1
+          MemberFirstName: 1,
+          MemberLastName: 1
         }
       },
       {
@@ -136,8 +149,15 @@ export async function GET(request: Request) {
         agentsWithPendingListings: 'Calculating...'
       },
       sampleAgentListingRelationships: listingAgentChecks,
-      topAgentsWithPendings: topAgents,
-      sampleAgentsWithoutPendings: agentsWithNoListings,
+      topAgentsWithPendings: topAgents.map(agent => ({
+        memberKey: agent.memberKey,
+        fullName: `${agent.MemberFirstName} ${agent.MemberLastName}`,
+        listingCount: agent.listingCount
+      })),
+      sampleAgentsWithoutPendings: agentsWithNoListings.map(agent => ({
+        memberKey: agent.memberKey,
+        fullName: `${agent.MemberFirstName} ${agent.MemberLastName}`
+      })),
       message: 'Database check completed'
     })
   } catch (error) {
