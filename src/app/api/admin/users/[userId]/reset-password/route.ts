@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
+import { findUnique, update } from '@/lib/models/user'
 
 export async function POST(
   req: Request,
@@ -16,10 +16,7 @@ export async function POST(
     }
 
     // Check if user is super admin
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { role: true }
-    })
+    const currentUser = await findUnique({ email: session.user.email })
 
     if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -32,11 +29,8 @@ export async function POST(
     const hashedPassword = await bcrypt.hash(tempPassword, 10)
 
     // Update user with new password
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        password: hashedPassword
-      }
+    await update({ id: userId }, {
+      password: hashedPassword
     })
 
     // In a real app, you'd send an email with the temporary password
@@ -67,14 +61,10 @@ export async function PUT(
     }
 
     // Find user with valid reset token
-    const user = await prisma.user.findFirst({
-      where: {
-        id: userId,
-        resetToken: token,
-        resetTokenExpiry: {
-          gt: new Date()
-        }
-      }
+    const user = await findUnique({
+      id: userId,
+      resetToken: token,
+      resetTokenExpiry: { $gt: new Date() }
     })
 
     if (!user) {
@@ -85,13 +75,10 @@ export async function PUT(
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
     // Update user password and clear reset token
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null
-      }
+    await update({ id: userId }, {
+      password: hashedPassword,
+      resetToken: null,
+      resetTokenExpiry: null
     })
 
     return NextResponse.json({ message: 'Password reset successfully' })
