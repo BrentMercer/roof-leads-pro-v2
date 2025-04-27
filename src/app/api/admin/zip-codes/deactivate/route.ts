@@ -1,19 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
-import { Types } from 'mongoose'
-
-interface MongoUser {
-  _id: Types.ObjectId
-  name: string | null
-  email: string | null
-  role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
-  assignedZipCodes: Array<{
-    zipCode: string
-    purchaseDate: Date
-    active: boolean
-  }>
-}
+import { findUnique, update } from '@/lib/models/user'
+import { User } from '@/types/user'
 
 export async function POST(req: Request) {
   try {
@@ -24,9 +12,7 @@ export async function POST(req: Request) {
     }
 
     // Check if user is super admin
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    }) as MongoUser | null
+    const currentUser = await findUnique({ email: session.user.email }) as User | null
 
     if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -39,16 +25,14 @@ export async function POST(req: Request) {
     }
 
     // Get the user and validate the zip code assignment
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    }) as MongoUser | null
+    const user = await findUnique({ id: userId }) as User | null
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     const assignment = user.assignedZipCodes?.find(
-      (a: { zipCode: string; active: boolean }) => a.zipCode === zipCode && a.active
+      a => a.zipCode === zipCode && a.active
     )
 
     if (!assignment) {
@@ -56,26 +40,21 @@ export async function POST(req: Request) {
     }
 
     // Update the zip code assignment to inactive
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        assignedZipCodes: {
-          updateMany: {
-            where: {
-              zipCode: zipCode,
-              active: true
-            },
-            data: {
-              active: false
-            }
-          }
+    const updatedUser = await update(
+      { 
+        id: userId,
+        'assignedZipCodes.zipCode': zipCode,
+        'assignedZipCodes.active': true
+      },
+      {
+        $set: {
+          'assignedZipCodes.$.active': false
         }
       }
-    }) as MongoUser
+    ) as User
 
-    // Transform the response
     return NextResponse.json({
-      id: updatedUser._id.toString(),
+      id: updatedUser._id,
       name: updatedUser.name,
       email: updatedUser.email,
       role: updatedUser.role,
