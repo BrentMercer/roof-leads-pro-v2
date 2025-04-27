@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { findFirst, update } from '@/lib/models/user'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { logVerificationAttempt } from '@/lib/verification-logger'
+import { User } from '@/types/user'
 
 export async function POST(req: Request) {
   try {
@@ -15,14 +16,15 @@ export async function POST(req: Request) {
       )
     }
 
-    const verificationToken = await prisma.verificationToken.findUnique({
-      where: { token },
-      include: { user: true }
-    })
+    // Find user with matching verification token
+    const user = await findFirst({
+      'verificationToken.token': token,
+      'verificationToken.expires': { $gt: new Date() }
+    }) as User | null
 
-    if (!verificationToken || verificationToken.expires < new Date()) {
+    if (!user) {
       await logVerificationAttempt({
-        userId: verificationToken?.userId || 'unknown',
+        userId: 'unknown',
         type: 'VERIFY',
         status: 'FAILURE',
         error: 'Invalid or expired token',
@@ -35,17 +37,19 @@ export async function POST(req: Request) {
       )
     }
 
-    await prisma.user.update({
-      where: { id: verificationToken.userId },
-      data: { emailVerified: new Date() }
-    })
-
-    await prisma.verificationToken.delete({
-      where: { id: verificationToken.id }
-    })
+    // Update user and clear verification token
+    await update(
+      { _id: user._id },
+      {
+        $set: { 
+          emailVerified: new Date(),
+          verificationToken: null
+        }
+      }
+    )
 
     await logVerificationAttempt({
-      userId: verificationToken.userId,
+      userId: user._id,
       type: 'VERIFY',
       status: 'SUCCESS',
       req
