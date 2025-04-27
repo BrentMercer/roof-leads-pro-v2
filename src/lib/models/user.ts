@@ -1,10 +1,15 @@
 import mongoose from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
+import type { UserDocument } from '@/lib/types/user'
 
 // Define user schema
 const UserSchema = new mongoose.Schema({
   name: String,
-  email: { type: String, unique: true },
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
   password: String,
   emailVerified: Date,
   image: String,
@@ -14,14 +19,17 @@ const UserSchema = new mongoose.Schema({
     token: String,
     expires: Date
   },
-  twoFactorEnabled: Boolean,
+  twoFactorEnabled: {
+    type: Boolean,
+    default: false
+  },
   twoFactorSecret: String,
   tempTwoFactorSecret: String,
   backupCodes: [String],
-  role: { 
-    type: String, 
-    enum: ['USER', 'SUPER_ADMIN', 'SUB_ADMIN'], 
-    default: 'USER' 
+  role: {
+    type: String,
+    enum: ['USER', 'SUPER_ADMIN', 'SUB_ADMIN'],
+    default: 'USER'
   },
   assignedZipCodes: [{
     zipCode: { type: String, required: true },
@@ -30,10 +38,15 @@ const UserSchema = new mongoose.Schema({
   }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+}, {
+  timestamps: true
 })
 
+// Add indexes
+UserSchema.index({ email: 1 }, { unique: true })
+
 // Model
-const User = mongoose.models.User || mongoose.model('User', UserSchema)
+const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema)
 
 // Prisma-like helper functions
 const findUnique = async (where: any) => {

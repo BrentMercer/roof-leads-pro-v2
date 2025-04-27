@@ -1,25 +1,33 @@
-import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { connectDB } from "@/lib/mongodb"
+import { User } from "@/lib/models/user"
+import type { UserDocument } from "@/lib/types/user"
 
 export async function GET() {
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: 'test@example.com' },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        password: true, // Check if password exists
-        twoFactorEnabled: true,
-        twoFactorSecret: true,
-      }
+    await connectDB()
+    
+    const user = await User.findOne({ 
+      email: 'test@example.com' 
     })
+    .select('email name password twoFactorEnabled twoFactorSecret')
+    .lean() as UserDocument | null
+    
+    if (!user) {
+      return NextResponse.json({ 
+        success: true,
+        user: null
+      })
+    }
+
+    // Destructure password out and create safe user object
+    const { password, ...safeUser } = user
     
     return NextResponse.json({ 
       success: true,
       user: {
-        ...user,
-        hasPassword: !!user?.password, // Send boolean instead of actual password
+        ...safeUser,
+        hasPassword: !!password // Send boolean instead of actual password
       }
     })
   } catch (error) {
