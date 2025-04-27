@@ -32,6 +32,17 @@ export interface MLSAgent {
   OfficeName?: string
 }
 
+export interface MLSAgentDocument extends Document {
+  memberKey: string
+  memberFirstName: string
+  memberLastName: string
+  memberEmail?: string
+  preferredPhone?: string
+  officeName?: string
+  _id: string
+  __v: number
+}
+
 export interface MLSListingDocument extends Document {
   listingKey: string
   listPrice: number
