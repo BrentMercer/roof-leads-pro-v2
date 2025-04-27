@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { MLSListing } from '@/lib/models/mls'
+import type { SortOrder } from 'mongoose'
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     // Add sorting
     const sortField = searchParams.get('sortBy') || 'listPrice'
     const sortDirection = searchParams.get('sortDir') === 'desc' ? -1 : 1
-    const sortOptions: Record<string, number> = {}
+    const sortOptions: { [key: string]: SortOrder } = {}
     
     switch(sortField) {
       case 'price':
