@@ -3,8 +3,9 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
 import { format } from 'date-fns'
 import { adminMiddleware } from '@/middleware/admin'
+import type { NextRequest } from 'next/server'
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     // Check admin access
     const middlewareResponse = await adminMiddleware(req)

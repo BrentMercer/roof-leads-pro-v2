@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
 import { adminMiddleware } from '@/middleware/admin'
+import type { NextRequest } from 'next/server'
 
 const ITEMS_PER_PAGE = 10
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     // Check admin access
     const middlewareResponse = await adminMiddleware(req)
