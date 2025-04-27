@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { MLSAgent, MLSListing, ListingLifecycle } from '@/lib/models/mls'
+import type { MLSAgent as MLSAgentType } from '@/lib/types/mls'
 
 export async function GET(request: Request) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     await connectDB()
     
     // Find the agent
-    const agent = await MLSAgent.findOne({ memberKey: agentKey }).lean()
+    const agent = await MLSAgent.findOne({ memberKey: agentKey }).lean() as MLSAgentType | null
     
     if (!agent) {
       return NextResponse.json({
@@ -28,13 +29,13 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       agent: {
-        memberKey: agent.memberKey,
-        fullName: agent.fullName,
-        email: agent.email,
-        phone: agent.phone,
-        officeName: agent.officeName,
+        memberKey: agent.MemberKey,
+        fullName: `${agent.MemberFirstName} ${agent.MemberLastName}`,
+        email: agent.MemberEmail,
+        phone: agent.PreferredPhone,
+        officeName: agent.OfficeName,
         pendingListingsCount: pendingListings.length,
-        pendingListingsArray: agent.pendingListings || []
+        pendingListingsArray: []  // This seems to be unused, keeping empty array for compatibility
       },
       pendingListings: pendingListings.map(listing => ({
         listingKey: listing.listingKey,
