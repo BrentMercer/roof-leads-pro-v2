@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { findUnique, update } from '@/lib/models/user'
+import { User } from '@/types/user'
 
 export async function PATCH(
   req: Request,
@@ -14,10 +15,7 @@ export async function PATCH(
     }
 
     // Check if user is super admin
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { role: true }
-    })
+    const currentUser = await findUnique({ email: session.user.email }) as User | null
 
     if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -32,10 +30,7 @@ export async function PATCH(
     }
 
     // Update user
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: updates
-    })
+    const user = await update({ id: userId }, updates) as User
 
     return NextResponse.json(user)
   } catch (error) {
@@ -59,10 +54,7 @@ export async function DELETE(
     }
 
     // Check if user is super admin
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { role: true }
-    })
+    const currentUser = await findUnique({ email: session.user.email }) as User | null
 
     if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -71,12 +63,9 @@ export async function DELETE(
     const { userId } = params
 
     // Instead of deleting, we'll just deactivate the user
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        emailVerified: null // This effectively deactivates the user
-      }
-    })
+    const user = await update({ id: userId }, {
+      emailVerified: null // This effectively deactivates the user
+    }) as User
 
     return NextResponse.json(user)
   } catch (error) {
