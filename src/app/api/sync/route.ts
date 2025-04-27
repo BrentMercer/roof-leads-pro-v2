@@ -1,30 +1,27 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { connectDB } from '@/lib/mongodb'
+import { MLSAgent, MLSListing, StatusChange, SyncLog } from '@/lib/models/mls'
 import { getMLSToken, getNewPendingContracts } from '@/lib/mls-auth'
-import type { MLSTransaction, MLSAgent } from '@/lib/types/mls'
+import type { MLSTransaction, MLSAgent as MLSAgentType, MLSListingDocument } from '@/lib/types/mls'
 
-async function syncAgents(agents: MLSAgent[]) {
+async function syncAgents(agents: MLSAgentType[]) {
   console.log(`Syncing ${agents.length} agents...`)
   
   for (const agent of agents) {
-    await prisma.agent.upsert({
-      where: { MemberKey: agent.MemberKey },
-      update: {
-        MemberFirstName: agent.MemberFirstName,
-        MemberLastName: agent.MemberLastName,
-        MemberEmail: agent.MemberEmail,
-        PreferredPhone: agent.PreferredPhone,
-        OfficeName: agent.OfficeName,
+    await MLSAgent.findOneAndUpdate(
+      { memberKey: agent.MemberKey },
+      {
+        $set: {
+          memberKey: agent.MemberKey,
+          memberFirstName: agent.MemberFirstName,
+          memberLastName: agent.MemberLastName,
+          memberEmail: agent.MemberEmail,
+          preferredPhone: agent.PreferredPhone,
+          officeName: agent.OfficeName,
+        }
       },
-      create: {
-        MemberKey: agent.MemberKey,
-        MemberFirstName: agent.MemberFirstName,
-        MemberLastName: agent.MemberLastName,
-        MemberEmail: agent.MemberEmail,
-        PreferredPhone: agent.PreferredPhone,
-        OfficeName: agent.OfficeName,
-      },
-    })
+      { upsert: true, new: true }
+    )
   }
 }
 
@@ -32,59 +29,53 @@ async function syncTransactions(transactions: MLSTransaction[]) {
   console.log(`Syncing ${transactions.length} transactions...`)
   
   for (const transaction of transactions) {
-    const existing = await prisma.transaction.findUnique({
-      where: { ListingKey: transaction.ListingKey },
-      include: { statusChanges: true }
-    })
+    const existing = await MLSListing.findOne({
+      listingKey: transaction.ListingKey
+    }).lean() as MLSListingDocument | null
 
     // Check for status change
-    if (existing && existing.StandardStatus !== transaction.StandardStatus) {
-      await prisma.statusChange.create({
-        data: {
-          transactionId: existing.id,
-          oldStatus: existing.StandardStatus as any, // Cast to enum
-          newStatus: transaction.StandardStatus as any, // Cast to enum
-          daysOnMarket: Math.floor((new Date().getTime() - new Date(existing.ListDate).getTime()) / (1000 * 60 * 60 * 24))
-        }
+    if (existing && existing.standardStatus !== transaction.StandardStatus) {
+      await StatusChange.create({
+        listingId: existing._id,
+        oldStatus: existing.standardStatus,
+        newStatus: transaction.StandardStatus,
+        daysOnMarket: Math.floor((new Date().getTime() - new Date(existing.listDate).getTime()) / (1000 * 60 * 60 * 24))
       })
     }
 
     // Update or create transaction
-    await prisma.transaction.upsert({
-      where: { ListingKey: transaction.ListingKey },
-      update: {
-        ListPrice: transaction.ListPrice,
-        StandardStatus: transaction.StandardStatus,
-        ModificationTimestamp: new Date(transaction.ModificationTimestamp),
-        // ... other fields
+    await MLSListing.findOneAndUpdate(
+      { listingKey: transaction.ListingKey },
+      {
+        $set: {
+          listPrice: transaction.ListPrice,
+          standardStatus: transaction.StandardStatus,
+          modificationTimestamp: new Date(transaction.ModificationTimestamp),
+          listAgentKey: transaction.ListAgentKey,
+          listDate: new Date(transaction.ListDate),
+          streetNumberNumeric: transaction.StreetNumberNumeric,
+          streetName: transaction.StreetName,
+          city: transaction.City,
+          stateOrProvince: transaction.StateOrProvince,
+          standardFields: {
+            postalCode: transaction.PostalCode
+          }
+        }
       },
-      create: {
-        ListingKey: transaction.ListingKey,
-        ListPrice: transaction.ListPrice,
-        ListAgentKey: transaction.ListAgentKey,
-        StandardStatus: transaction.StandardStatus,
-        ModificationTimestamp: new Date(transaction.ModificationTimestamp),
-        ListDate: new Date(transaction.ListDate),
-        StreetNumberNumeric: transaction.StreetNumberNumeric,
-        StreetName: transaction.StreetName,
-        City: transaction.City,
-        StateOrProvince: transaction.StateOrProvince,
-        PostalCode: transaction.PostalCode,
-        // ... other fields
-      }
-    })
+      { upsert: true, new: true }
+    )
   }
 }
 
 export async function GET() {
   try {
+    await connectDB()
+
     // Log sync start
-    const syncLog = await prisma.syncLog.create({
-      data: {
-        status: 'In Progress',
-        type: 'Full',
-        startTime: new Date()
-      }
+    const syncLog = await SyncLog.create({
+      status: 'In Progress',
+      type: 'Full',
+      startTime: new Date()
     })
 
     // Get MLS token
@@ -95,12 +86,11 @@ export async function GET() {
     
     // Sync data
     await syncAgents(agents)
-    await syncTransactions(listings)
+    await syncTransactions(listings as unknown as MLSTransaction[])
 
     // Update sync log
-    await prisma.syncLog.update({
-      where: { id: syncLog.id },
-      data: {
+    await SyncLog.findByIdAndUpdate(syncLog._id, {
+      $set: {
         status: 'Success',
         endTime: new Date(),
         recordsProcessed: listings.length + agents.length

@@ -1,3 +1,5 @@
+import type { Document } from 'mongoose'
+
 export interface MLSTransaction {
   ListingKey: string
   ListPrice: number
@@ -5,7 +7,7 @@ export interface MLSTransaction {
   StandardStatus: string
   ModificationTimestamp: string
   ListDate: string
-  StreetNumberNumeric?: string
+  StreetNumberNumeric: string
   StreetName: string
   City: string
   StateOrProvince: string
@@ -28,4 +30,22 @@ export interface MLSAgent {
   MemberEmail?: string
   PreferredPhone?: string
   OfficeName?: string
+}
+
+export interface MLSListingDocument extends Document {
+  listingKey: string
+  listPrice: number
+  listAgentKey: string
+  standardStatus: string
+  modificationTimestamp: Date
+  listDate: Date
+  streetNumberNumeric: string
+  streetName: string
+  city: string
+  stateOrProvince: string
+  standardFields: {
+    postalCode: string
+  }
+  _id: string
+  __v: number
 } 

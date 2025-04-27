@@ -262,4 +262,58 @@ if (!mlsAgentSchema.indexes().find(idx => idx[0].memberMlsId === 1)) {
 const MLSAgent = mongoose.models.MLSAgent || mongoose.model<MLSAgentDocument>('MLSAgent', mlsAgentSchema)
 const MLSListing = mongoose.models.MLSListing || mongoose.model<MLSListingDocument>('MLSListing', mlsListingSchema)
 
+// Status Change Schema
+const statusChangeSchema = new mongoose.Schema({
+  listingId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MLSListing',
+    required: true
+  },
+  oldStatus: {
+    type: String,
+    required: true
+  },
+  newStatus: {
+    type: String,
+    required: true
+  },
+  daysOnMarket: {
+    type: Number,
+    required: true
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now
+  }
+})
+
+// Sync Log Schema
+const syncLogSchema = new mongoose.Schema({
+  status: {
+    type: String,
+    enum: ['In Progress', 'Success', 'Failed'],
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['Full', 'Partial'],
+    required: true
+  },
+  startTime: {
+    type: Date,
+    required: true
+  },
+  endTime: Date,
+  recordsProcessed: {
+    type: Number,
+    default: 0
+  },
+  error: String
+}, {
+  timestamps: true
+})
+
+export const StatusChange = mongoose.models.StatusChange || mongoose.model('StatusChange', statusChangeSchema)
+export const SyncLog = mongoose.models.SyncLog || mongoose.model('SyncLog', syncLogSchema)
+
 export { MLSAgent, MLSListing } 
