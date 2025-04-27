@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { connectDB } from '@/lib/mongodb'
+import { MLSListing } from '@/lib/models/mls'
+import { ZipCodeMetrics } from '@/lib/models/metrics'
 
 async function calculateZipMetrics(zipCode: string) {
   const now = new Date()
@@ -7,24 +9,22 @@ async function calculateZipMetrics(zipCode: string) {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
   // Get all transactions for this ZIP code
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      PostalCode: zipCode,
-      ModificationTimestamp: {
-        gte: thirtyDaysAgo
-      }
+  const transactions = await MLSListing.find({
+    'standardFields.postalCode': zipCode,
+    modificationTimestamp: {
+      $gte: thirtyDaysAgo
     }
-  })
+  }).lean()
 
   // Calculate recent pendings (last 24h)
   const recentPendings = transactions.filter(t => 
-    t.StandardStatus === 'Under Contract' && 
-    new Date(t.ModificationTimestamp) >= twentyFourHoursAgo
+    t.standardStatus === 'Under Contract' && 
+    new Date(t.modificationTimestamp) >= twentyFourHoursAgo
   ).length
 
   // Calculate total current pendings
   const totalPendings = transactions.filter(t => 
-    t.StandardStatus === 'Under Contract'
+    t.standardStatus === 'Under Contract'
   ).length
 
   // Calculate monthly metrics
@@ -32,7 +32,7 @@ async function calculateZipMetrics(zipCode: string) {
 
   // Calculate average price
   const averagePrice = transactions.length > 0
-    ? transactions.reduce((sum, t) => sum + t.ListPrice, 0) / transactions.length
+    ? transactions.reduce((sum, t) => sum + (t.listPrice || 0), 0) / transactions.length
     : 0
 
   return {
@@ -47,40 +47,36 @@ async function calculateZipMetrics(zipCode: string) {
 
 export async function GET() {
   try {
+    await connectDB()
+
     // Get unique ZIP codes from transactions
-    const uniqueZips = await prisma.transaction.findMany({
-      select: {
-        PostalCode: true
-      },
-      distinct: ['PostalCode']
-    })
+    const uniqueZips = await MLSListing.distinct('standardFields.postalCode')
 
     const metrics = []
-    for (const { PostalCode } of uniqueZips) {
+    for (const postalCode of uniqueZips) {
+      if (!postalCode) continue // Skip if postal code is null/undefined
+      
       // Calculate metrics for each ZIP code
-      const zipMetrics = await calculateZipMetrics(PostalCode)
+      const zipMetrics = await calculateZipMetrics(postalCode)
       
       // Update or create metrics in database
-      await prisma.zipCodeMetrics.upsert({
-        where: { zipCode: PostalCode },
-        update: {
-          monthlyTransactions: zipMetrics.monthlyTransactions,
-          averagePrice: zipMetrics.averagePrice,
-          lastUpdate: zipMetrics.lastUpdate,
-          recentPendings: zipMetrics.recentPendings,
-          totalPendings: zipMetrics.totalPendings,
-          isActive: zipMetrics.monthlyTransactions > 0
+      await ZipCodeMetrics.findOneAndUpdate(
+        { zipCode: postalCode },
+        {
+          $set: {
+            monthlyTransactions: zipMetrics.monthlyTransactions,
+            averagePrice: zipMetrics.averagePrice,
+            lastUpdate: zipMetrics.lastUpdate,
+            recentPendings: zipMetrics.recentPendings,
+            totalPendings: zipMetrics.totalPendings,
+            isActive: zipMetrics.monthlyTransactions > 0
+          }
         },
-        create: {
-          zipCode: PostalCode,
-          monthlyTransactions: zipMetrics.monthlyTransactions,
-          averagePrice: zipMetrics.averagePrice,
-          lastUpdate: zipMetrics.lastUpdate,
-          recentPendings: zipMetrics.recentPendings,
-          totalPendings: zipMetrics.totalPendings,
-          isActive: zipMetrics.monthlyTransactions > 0
+        { 
+          upsert: true,
+          new: true 
         }
-      })
+      )
 
       metrics.push(zipMetrics)
     }
