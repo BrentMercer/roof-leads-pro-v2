@@ -77,9 +77,13 @@ export async function PUT(
 
     // Update user password and clear reset token
     await update({ id: userId }, {
-      password: hashedPassword,
-      resetToken: null,
-      resetTokenExpiry: null
+      $set: {
+        password: hashedPassword
+      },
+      $unset: {
+        resetToken: "",
+        resetTokenExpiry: ""
+      }
     })
 
     return NextResponse.json({ message: 'Password reset successfully' })

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
-import { connectDB } from '@/lib/mongodb'
-import type { UserDocument } from '@/lib/types/user'
+import { connectDB } from '../mongodb'
+import type { UserDocument } from '../types/user'
 
 interface VerificationToken {
   token: string
@@ -20,7 +20,8 @@ const UserSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    index: true
   },
   password: String,
   emailVerified: Date,
@@ -58,9 +59,6 @@ const UserSchema = new mongoose.Schema({
 }, {
   timestamps: true
 })
-
-// Add indexes
-UserSchema.index({ email: 1 }, { unique: true })
 
 // Model
 const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema)
@@ -118,7 +116,7 @@ export const create = async (data: Partial<UserDocument>) => {
   return newUser.save()
 }
 
-export const update = async (where: { id?: string; email?: string }, data: Partial<UserDocument>) => {
+export const update = async (where: { id?: string; email?: string }, data: any) => {
   await connectDB()
   if (where.id) {
     return User.findByIdAndUpdate(where.id, data, { new: true }).lean().exec()

@@ -1,15 +1,15 @@
-// Compatability layer to make migration from Prisma to Mongoose easier
+// MongoDB client interface for consistent database access
 import * as UserModel from '@/lib/models/user'
 import * as VerificationLogModel from '@/lib/models/verification-log'
 import * as SyncLogModel from '@/lib/models/sync-log'
 
-// This provides a Prisma-like interface that redirects to our Mongoose models
-export const prisma = {
+// MongoDB client interface that provides consistent database operations
+export const mongoClient = {
   user: {
-    findUnique: async (query: any) => {
+    findOne: async (query: any) => {
       return UserModel.findUnique(query.where)
     },
-    findMany: async (query: any) => {
+    find: async (query: any) => {
       return UserModel.findMany(query)
     },
     findFirst: async (query: any) => {
@@ -18,11 +18,11 @@ export const prisma = {
     create: async (query: any) => {
       return UserModel.create(query.data)
     },
-    update: async (query: any) => {
+    updateOne: async (query: any) => {
       return UserModel.update(query.where, query.data)
     },
-    delete: async (query: any) => {
-      return UserModel.delete(query.where)
+    deleteOne: async (query: any) => {
+      return UserModel.deleteUser(query.where)
     }
   },
   
@@ -30,7 +30,7 @@ export const prisma = {
     create: async (query: any) => {
       return VerificationLogModel.create(query.data)
     },
-    findMany: async (query: any = {}) => {
+    find: async (query: any = {}) => {
       return VerificationLogModel.findMany(
         query.where,
         {
@@ -40,7 +40,7 @@ export const prisma = {
         }
       )
     },
-    count: async (query: any = {}) => {
+    countDocuments: async (query: any = {}) => {
       return VerificationLogModel.count(query.where)
     }
   },
@@ -49,18 +49,11 @@ export const prisma = {
     create: async (query: any) => {
       return SyncLogModel.create(query.data)
     },
-    findMany: async (query: any = {}) => {
-      return SyncLogModel.findMany(
-        query.where,
-        {
-          orderBy: query.orderBy,
-          skip: query.skip,
-          take: query.take
-        }
-      )
+    find: async (query: any = {}) => {
+      return SyncLogModel.findFirst(query.where)
     },
-    update: async (query: any) => {
-      return SyncLogModel.update(query.where, query.data)
+    updateOne: async (query: any) => {
+      return SyncLogModel.update(query.where.id, query.data)
     }
   }
 } 
