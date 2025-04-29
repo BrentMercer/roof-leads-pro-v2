@@ -10,6 +10,7 @@ export interface SyncStatus {
   agentsProcessed: number
   startTime: string
   lastUpdate: string
+  endTime?: string
   error?: string
 }
 
