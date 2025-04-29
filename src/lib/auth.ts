@@ -9,6 +9,9 @@ import { connectDB } from "@/lib/mongodb"
 import mongoose from "mongoose"
 import { headers } from 'next/headers'
 
+// Define a type for the role
+type UserRole = 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+
 // Define User schema for authentication
 const UserSchema = new mongoose.Schema({
   name: String,
@@ -20,7 +23,7 @@ const UserSchema = new mongoose.Schema({
   resetTokenExpiry: Date,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  role: { type: String, enum: ["USER", "SUPER_ADMIN", "SUB_ADMIN"], default: "USER" },
+  role: { type: String, enum: ["USER", "SUPER_ADMIN", "SUB_ADMIN"], default: "USER" as UserRole },
   twoFactorEnabled: { type: Boolean, default: false },
   twoFactorSecret: String,
   tempTwoFactorSecret: String,
@@ -41,14 +44,14 @@ const User = mongoose.models.User || mongoose.model("User", UserSchema)
 declare module "next-auth" {
   interface User {
     id: string;
-    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN';
+    role: UserRole;
     remember?: boolean;
   }
   
   interface Session {
     user: {
       id: string;
-      role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN';
+      role: UserRole;
     } & DefaultSession["user"];
     maxAge?: number;
   }
@@ -57,7 +60,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN';
+    role: UserRole;
     remember?: boolean;
   }
 }
@@ -142,7 +145,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id
-        session.user.role = token.role as 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+        session.user.role = token.role
       }
       // Set session maxAge based on "remember me"
       if (!token.remember) {
