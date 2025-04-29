@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { searchListings, ListingStatus } from '@/lib/spark-api'
-import { MLSSource } from '@/lib/models/mls'
 
 const API_KEY = process.env.CRON_SECRET || 'localdev'
 

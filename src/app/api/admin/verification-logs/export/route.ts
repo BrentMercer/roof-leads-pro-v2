@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { VerificationLog } from '@/lib/models/verification-log'
 import { format } from 'date-fns'
 import { adminMiddleware } from '@/middleware/admin'

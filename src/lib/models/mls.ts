@@ -25,7 +25,7 @@ export enum MLSAssociation {
   // Add more as needed
 }
 
-interface MLSAgentDocument extends Document {
+export interface MLSAgentDocument extends Document {
   memberKey: string
   memberKeyNumeric?: number
   memberMlsId?: string
@@ -43,7 +43,7 @@ interface MLSAgentDocument extends Document {
   association: MLSAssociation // Real estate association source
 }
 
-interface MLSListingDocument extends Document {
+export interface MLSListingDocument extends Document {
   listingKey: string
   listAgentKey: string
   mlsStatus?: string

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { findUnique, update } from '@/lib/models/user'
 import { User } from '@/types/user'
 
-export async function POST(req: Request) {
+export async function POST() {
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {

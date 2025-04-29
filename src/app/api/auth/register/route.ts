@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     const verifyTokenExpiry = new Date(Date.now() + 24 * 3600000) // 24 hours
 
     // Create user
-    const user = await User.create({
+    await User.create({
       name,
       email,
       password: hashedPassword,

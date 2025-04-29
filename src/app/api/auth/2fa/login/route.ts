@@ -1,6 +1,4 @@
-import { getServerSession } from "next-auth/next"
 import { authenticator } from "otplib"
-import { authOptions } from "@/lib/auth"
 import { findUnique } from '@/lib/models/user'
 import { NextResponse } from "next/server"
 import { User } from '@/types/user'

@@ -1,5 +1,5 @@
 import { getMLSToken } from '@/lib/mls-auth'
-import { MLSListing, MLSAgent } from '@/lib/models/mls'
+import { MLSListing, MLSAgent, MLSListingDocument, MLSAgentDocument } from '@/lib/models/mls'
 import { SyncHistory } from '@/lib/models/sync-history'
 
 export async function syncMLS(type: 'quick' | 'full' | 'historical' = 'quick') {
@@ -7,8 +7,8 @@ export async function syncMLS(type: 'quick' | 'full' | 'historical' = 'quick') {
   const token = await getMLSToken()
 
   try {
-    let listings = []
-    let agents = []
+    let listings: Partial<MLSListingDocument>[] = []
+    let agents: Partial<MLSAgentDocument>[] = []
 
     switch (type) {
       case 'quick':
@@ -30,8 +30,25 @@ export async function syncMLS(type: 'quick' | 'full' | 'historical' = 'quick') {
     }
 
     // Process and upsert data
-    const listingResult = await MLSListing.bulkWrite(/* ... */)
-    const agentResult = await MLSAgent.bulkWrite(/* ... */)
+    const listingResult = await MLSListing.bulkWrite(
+      listings.map(listing => ({
+        updateOne: {
+          filter: { listingKey: listing.listingKey },
+          update: { $set: listing },
+          upsert: true
+        }
+      }))
+    )
+
+    const agentResult = await MLSAgent.bulkWrite(
+      agents.map(agent => ({
+        updateOne: {
+          filter: { memberKey: agent.memberKey },
+          update: { $set: agent },
+          upsert: true
+        }
+      }))
+    )
 
     // Record successful sync
     await SyncHistory.create({

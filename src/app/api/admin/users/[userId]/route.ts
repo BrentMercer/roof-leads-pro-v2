@@ -43,7 +43,6 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  req: Request,
   { params }: { params: { userId: string } }
 ) {
   try {

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { MLSAgent } from '@/lib/models/mls'
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await connectDB()
     

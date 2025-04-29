@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const headersList = headers()
     const authHeader = headersList.get('authorization')

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import { ZipCode } from '@/lib/models/zipcode'
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     await connectDB()
     const count = await ZipCode.countDocuments()

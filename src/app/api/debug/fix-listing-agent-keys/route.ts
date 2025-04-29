@@ -22,7 +22,6 @@ export async function GET(request: Request) {
     
     // Get all agents and create a map of their memberKeys
     const agents = await MLSAgent.find().lean()
-    const agentKeys = new Set(agents.map(agent => agent.memberKey))
     console.log(`Found ${agents.length} agents with valid memberKeys`)
     
     // Get all listings with invalid agent keys

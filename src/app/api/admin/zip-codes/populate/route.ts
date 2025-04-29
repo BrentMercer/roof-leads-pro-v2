@@ -19,7 +19,7 @@ interface MongoUser {
   }>
 }
 
-export async function POST(req: Request) {
+export async function POST() {
   try {
     const session = await getServerSession()
     

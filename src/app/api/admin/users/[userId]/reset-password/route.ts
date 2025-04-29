@@ -6,7 +6,6 @@ import { findUnique, update } from '@/lib/models/user'
 import { User } from '@/types/user'
 
 export async function POST(
-  req: Request,
   { params }: { params: { userId: string } }
 ) {
   try {
