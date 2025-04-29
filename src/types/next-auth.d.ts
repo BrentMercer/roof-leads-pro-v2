@@ -1,28 +1,27 @@
-import NextAuth from 'next-auth'
+import { DefaultSession } from "next-auth"
 
-declare module 'next-auth' {
+export type UserRole = 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+
+declare module "next-auth" {
+  interface User {
+    id: string
+    role: UserRole
+    remember?: boolean
+  }
+  
   interface Session {
     user: {
       id: string
-      email: string
-      name?: string | null
-      image?: string | null
-      role?: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
-    }
-  }
-
-  interface User {
-    id: string
-    email: string
-    name?: string | null
-    image?: string | null
-    role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+      role: UserRole
+    } & DefaultSession["user"]
+    maxAge?: number
   }
 }
 
-declare module 'next-auth/jwt' {
+declare module "next-auth/jwt" {
   interface JWT {
     id: string
-    role?: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+    role: UserRole
+    remember?: boolean
   }
 } 

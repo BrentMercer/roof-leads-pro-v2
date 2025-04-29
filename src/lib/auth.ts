@@ -1,5 +1,5 @@
 import { MongoDBAdapter } from "@auth/mongodb-adapter"
-import { NextAuthOptions, DefaultSession } from "next-auth"
+import { NextAuthOptions } from "next-auth"
 import { Adapter } from "next-auth/adapters"
 import { clientPromise } from "@/lib/mongodb"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -8,9 +8,7 @@ import bcrypt from "bcryptjs"
 import { connectDB } from "@/lib/mongodb"
 import mongoose from "mongoose"
 import { headers } from 'next/headers'
-
-// Define a type for the role
-type UserRole = 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
+import { UserRole } from "@/types/next-auth"
 
 // Define User schema for authentication
 const UserSchema = new mongoose.Schema({
@@ -23,7 +21,7 @@ const UserSchema = new mongoose.Schema({
   resetTokenExpiry: Date,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  role: { type: String, enum: ["USER", "SUPER_ADMIN", "SUB_ADMIN"], default: "USER" as UserRole },
+  role: { type: String, enum: ["USER", "SUPER_ADMIN", "SUB_ADMIN"], default: "USER" },
   twoFactorEnabled: { type: Boolean, default: false },
   twoFactorSecret: String,
   tempTwoFactorSecret: String,
@@ -39,31 +37,6 @@ const UserSchema = new mongoose.Schema({
 
 // Create or get the User model
 const User = mongoose.models.User || mongoose.model("User", UserSchema)
-
-// Extend the built-in session types
-declare module "next-auth" {
-  interface User {
-    id: string;
-    role: UserRole;
-    remember?: boolean;
-  }
-  
-  interface Session {
-    user: {
-      id: string;
-      role: UserRole;
-    } & DefaultSession["user"];
-    maxAge?: number;
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: UserRole;
-    remember?: boolean;
-  }
-}
 
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise) as Adapter,
@@ -122,7 +95,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             image: user.image,
-            role: user.role,
+            role: user.role as UserRole,
             remember: credentials.remember === 'true'
           }
         } catch (error) {
@@ -145,7 +118,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id
-        session.user.role = token.role
+        session.user.role = token.role as UserRole
       }
       // Set session maxAge based on "remember me"
       if (!token.remember) {
