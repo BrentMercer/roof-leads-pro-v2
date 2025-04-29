@@ -61,7 +61,7 @@ export interface MLSListingDocument extends Document {
   listingKey: string
   listPrice: number
   listAgentKey: string
-  status: string
+  standardStatus: string
   modificationTimestamp: Date
   listDate: Date
   streetNumber: string
