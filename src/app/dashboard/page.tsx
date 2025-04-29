@@ -6,6 +6,7 @@ import { DashboardCharts } from './components/dashboard-charts'
 import { StatsCards } from './components/stats-cards'
 import mongoose from 'mongoose'
 import { SyncHistory } from '@/lib/models/sync-history'
+import type { SyncHistoryDocument } from '@/lib/types/sync-history'
 
 async function getStats() {
   await connectDB()
@@ -73,17 +74,17 @@ async function getStats() {
         status: 'success' 
       }).sort({ 
         endTime: -1 
-      }).lean()
+      }).lean() as SyncHistoryDocument | null
       
-      if (lastSuccessfulSync && lastSuccessfulSync.endTime) {
+      if (lastSuccessfulSync?.endTime) {
         lastSyncedAt = lastSuccessfulSync.endTime
       } else {
         // If no successful sync is found, try to get any sync record
         const anySyncRecord = await SyncHistory.findOne().sort({ 
           startTime: -1 
-        }).lean()
+        }).lean() as SyncHistoryDocument | null
         
-        if (anySyncRecord && anySyncRecord.startTime) {
+        if (anySyncRecord?.startTime) {
           lastSyncedAt = anySyncRecord.startTime
         }
       }
