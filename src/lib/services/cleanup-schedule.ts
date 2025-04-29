@@ -1,8 +1,19 @@
-import { Redis } from '@upstash/redis'
+import { connectDB } from '@/lib/mongodb'
+import mongoose from 'mongoose'
 import { runCleanup } from './cleanup'
 
-const CLEANUP_SCHEDULE_KEY = 'cleanup:schedule'
-const CLEANUP_LAST_RUN_KEY = 'cleanup:lastRun'
+// Define cleanup schedule schema
+const cleanupScheduleSchema = new mongoose.Schema({
+  enabled: { type: Boolean, default: true },
+  frequency: { type: String, enum: ['daily', 'weekly', 'monthly'], required: true },
+  time: { type: String, required: true }, // HH:mm format
+  dayOfWeek: { type: Number, min: 0, max: 6 }, // 0-6 for weekly
+  dayOfMonth: { type: Number, min: 1, max: 31 }, // 1-31 for monthly
+  lastRun: Date,
+  nextRun: Date
+}, { timestamps: true })
+
+const CleanupSchedule = mongoose.models.CleanupSchedule || mongoose.model('CleanupSchedule', cleanupScheduleSchema)
 
 interface CleanupSchedule {
   enabled: boolean
@@ -15,26 +26,42 @@ interface CleanupSchedule {
 }
 
 export async function getCleanupSchedule(): Promise<CleanupSchedule | null> {
-  const schedule = await redis.get(CLEANUP_SCHEDULE_KEY)
-  return schedule ? JSON.parse(schedule as string) : null
+  await connectDB()
+  const schedule = await CleanupSchedule.findOne().sort({ createdAt: -1 })
+  return schedule ? {
+    enabled: schedule.enabled,
+    frequency: schedule.frequency,
+    time: schedule.time,
+    dayOfWeek: schedule.dayOfWeek,
+    dayOfMonth: schedule.dayOfMonth,
+    lastRun: schedule.lastRun?.toISOString(),
+    nextRun: schedule.nextRun?.toISOString()
+  } : null
 }
 
 export async function setCleanupSchedule(schedule: CleanupSchedule) {
+  await connectDB()
   // Calculate next run time
   const nextRun = calculateNextRun(schedule)
-  const updatedSchedule = { ...schedule, nextRun }
-  await redis.set(CLEANUP_SCHEDULE_KEY, JSON.stringify(updatedSchedule))
+  const updatedSchedule = { ...schedule, nextRun: new Date(nextRun) }
+  
+  await CleanupSchedule.findOneAndUpdate(
+    {},
+    updatedSchedule,
+    { upsert: true, new: true }
+  )
+  
   return updatedSchedule
 }
 
 export async function recordCleanupRun() {
-  const now = new Date().toISOString()
-  await redis.set(CLEANUP_LAST_RUN_KEY, now)
+  await connectDB()
+  const now = new Date()
   
-  // Update next run time
+  // Update last run time and calculate next run
   const schedule = await getCleanupSchedule()
   if (schedule) {
-    schedule.lastRun = now
+    schedule.lastRun = now.toISOString()
     await setCleanupSchedule(schedule)
   }
 }
