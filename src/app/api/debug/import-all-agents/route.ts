@@ -97,19 +97,18 @@ export async function GET(request: Request) {
             // Format agent data to match our schema
             const agentData = {
               memberKey: agent.MemberKey,
-              memberKeyNumeric: parseInt(agent.MemberKey),
-              memberMlsId: agent.MemberMlsId,
               fullName: agent.MemberFullName,
-              firstName: agent.MemberFirstName,
-              lastName: agent.MemberLastName,
               email: agent.MemberEmail,
               phone: agent.MemberPreferredPhone,
+              officeKey: agent.OfficeKey,
               officeName: agent.OfficeName,
-              modificationTimestamp: new Date(agent.ModificationTimestamp),
               source: MLSSource.SPARK,
-              sourceId: agent.MemberKey,
-              association: MLSAssociation.AAR,
+              association: MLSAssociation.LAR,
+              lastSync: new Date(),
               pendingListings: [],
+              activeListings: [],
+              archivedListings: [],
+              createdAt: new Date(),
               updatedAt: new Date()
             }
             
