@@ -7,7 +7,8 @@ export enum ListingLifecycle {
   CLOSED = "Closed",
   EXPIRED = "Expired",
   WITHDRAWN = "Withdrawn",
-  CANCELED = "Canceled"
+  CANCELED = "Canceled",
+  ARCHIVED = "Archived"
 }
 
 // Add enum for MLS source
