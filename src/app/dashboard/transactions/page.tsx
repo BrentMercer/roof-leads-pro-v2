@@ -339,7 +339,7 @@ export default async function TransactionsPage({
               timeFrame={timeFrame}
               priceRange={priceRange}
               zipCode={zipCode}
-              zipCodes={zipCodeData.map(zc => zc.code)}
+              zipCodes={zipCodeData}
               totalResults={pagination.total}
             />
           </div>
