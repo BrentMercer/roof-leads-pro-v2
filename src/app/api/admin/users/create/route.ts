@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { User } from '@/lib/models/user'
 import bcrypt from 'bcryptjs'
-import { User } from '@/types/user'
+import type { User as UserType } from '@/types/user'
 
 export async function POST(req: Request) {
   try {
@@ -13,10 +13,7 @@ export async function POST(req: Request) {
     }
 
     // Check if user is super admin
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { role: true }
-    }) as Pick<User, 'role'> | null
+    const currentUser = await User.findOne({ email: session.user.email }, { role: true }) as Pick<UserType, 'role'> | null
 
     if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -29,9 +26,7 @@ export async function POST(req: Request) {
     }
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    })
+    const existingUser = await User.findOne({ email })
 
     if (existingUser) {
       return NextResponse.json({ error: 'User already exists' }, { status: 400 })
@@ -41,18 +36,16 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        emailVerified: new Date(), // Auto-verify users created by admin
-      }
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      emailVerified: new Date(), // Auto-verify users created by admin
     })
 
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user
+    const { password: _, ...userWithoutPassword } = user.toObject()
 
     return NextResponse.json(userWithoutPassword)
   } catch (error) {

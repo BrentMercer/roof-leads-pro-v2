@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { syncAgents } from '@/lib/services/agent-sync'
 import { getMLSToken, getNewPendingContracts } from '@/lib/mls-auth'
-import { prisma } from '@/lib/db'
 
 export async function POST(request: Request) {
   try {

@@ -1,16 +1,19 @@
 import { syncMLSData } from '../lib/sync/mls-sync.service'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { Transaction } from '../lib/models/transaction'
+import { Agent } from '../lib/models/agent'
+import { connectDB } from '../lib/mongodb'
 
 async function testSync() {
   try {
     console.log('\n1. Starting MLS Sync Test...')
     
+    // Connect to MongoDB
+    await connectDB()
+    
     // Get current counts
     const beforeCounts = {
-      transactions: await prisma.transaction.count(),
-      agents: await prisma.agent.count()
+      transactions: await Transaction.countDocuments(),
+      agents: await Agent.countDocuments()
     }
     console.log('Current database counts:', beforeCounts)
 
@@ -21,26 +24,22 @@ async function testSync() {
 
     // Get new counts
     const afterCounts = {
-      transactions: await prisma.transaction.count(),
-      agents: await prisma.agent.count()
+      transactions: await Transaction.countDocuments(),
+      agents: await Agent.countDocuments()
     }
     console.log('\n3. Updated database counts:', afterCounts)
     
     // Show sample data
     console.log('\n4. Sample Transaction:')
-    const sampleTransaction = await prisma.transaction.findFirst({
-      include: {
-        agent: true
-      }
-    })
+    const sampleTransaction = await Transaction.findOne()
+      .populate('agent')
+      .lean()
     console.log(JSON.stringify(sampleTransaction, null, 2))
 
     console.log('\nTest completed successfully!')
   } catch (error) {
     console.error('\nTest failed:', error)
     process.exit(1)
-  } finally {
-    await prisma.$disconnect()
   }
 }
 

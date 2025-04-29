@@ -2,19 +2,39 @@ import mongoose from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
 
 // Define verification log schema
-const VerificationLogSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  type: String,
-  status: String,
-  ipAddress: String,
-  userAgent: String,
-  error: String,
-  createdAt: { type: Date, default: Date.now }
+const verificationLogSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['SEND', 'VERIFY', 'RESEND'],
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['SUCCESS', 'FAILURE'],
+    required: true
+  },
+  ipAddress: {
+    type: String,
+    required: true
+  },
+  userAgent: {
+    type: String,
+    required: true
+  },
+  error: {
+    type: String
+  }
+}, {
+  timestamps: true
 })
 
 // Model
-const VerificationLog = mongoose.models.VerificationLog || 
-  mongoose.model('VerificationLog', VerificationLogSchema)
+const VerificationLog = mongoose.models.VerificationLog || mongoose.model('VerificationLog', verificationLogSchema)
 
 // Helper functions
 const create = async (data: any) => {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { VerificationLog } from '@/lib/models/verification-log'
 import { format } from 'date-fns'
 import { adminMiddleware } from '@/middleware/admin'
 import type { NextRequest } from 'next/server'
@@ -13,25 +13,18 @@ export async function GET(req: NextRequest) {
       return middlewareResponse
     }
 
-    const logs = await prisma.verificationLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            email: true,
-            name: true
-          }
-        }
-      }
-    })
+    const logs = await VerificationLog.find({})
+      .sort({ createdAt: -1 })
+      .populate('userId', 'email name')
+      .lean()
 
     // Convert logs to CSV
     const csvRows = [
       ['Time', 'User', 'Email', 'Type', 'Status', 'IP Address', 'Error'].join(','),
       ...logs.map(log => [
         format(new Date(log.createdAt), 'yyyy-MM-dd HH:mm:ss'),
-        log.user.name || 'Unknown',
-        log.user.email,
+        log.userId?.name || 'Unknown',
+        log.userId?.email || '',
         log.type,
         log.status,
         log.ipAddress || '',

@@ -1,31 +1,12 @@
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { User } from '@/lib/models/user'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-
-interface UserRole {
-  role: 'USER' | 'SUPER_ADMIN' | 'SUB_ADMIN'
-}
-
-interface ZipCodeAssignment {
-  zipCode: string
-  purchaseDate: Date
-  active: boolean
-}
-
-interface UserWithZipCodes extends UserRole {
-  assignedZipCodes: ZipCodeAssignment[]
-}
+import type { UserRole, User as UserType, AssignedZipCode } from '@/types/user'
 
 // Helper function to check if user has access to a zip code
 async function hasZipCodeAccess(userId: string, zipCode: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { 
-      role: true,
-      assignedZipCodes: true
-    }
-  }) as UserWithZipCodes | null
+  const user = await User.findById(userId) as UserType | null
 
   if (!user) return false
 
@@ -36,7 +17,7 @@ async function hasZipCodeAccess(userId: string, zipCode: string) {
 
   // Check if user has active access to this zip code
   return user.assignedZipCodes?.some(
-    (assignment: ZipCodeAssignment) => assignment.zipCode === zipCode && assignment.active
+    (assignment: AssignedZipCode) => assignment.zipCode === zipCode && assignment.active
   ) || false
 }
 
@@ -51,10 +32,7 @@ export async function adminMiddleware(request: NextRequest) {
     )
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { role: true }
-  }) as UserRole | null
+  const user = await User.findOne({ email: session.user.email }, { role: true }) as Pick<UserType, 'role'> | null
 
   if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'SUB_ADMIN')) {
     return NextResponse.json(
@@ -77,10 +55,7 @@ export async function superAdminMiddleware(request: NextRequest) {
     )
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { role: true }
-  }) as UserRole | null
+  const user = await User.findOne({ email: session.user.email }, { role: true }) as Pick<UserType, 'role'> | null
 
   if (!user || user.role !== 'SUPER_ADMIN') {
     return NextResponse.json(

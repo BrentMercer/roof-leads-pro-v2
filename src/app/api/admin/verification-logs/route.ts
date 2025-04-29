@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { VerificationLog } from '@/lib/models/verification-log'
 import { adminMiddleware } from '@/middleware/admin'
 import type { NextRequest } from 'next/server'
 
@@ -20,31 +20,32 @@ export async function GET(req: NextRequest) {
     const type = url.searchParams.get('type') || undefined
     const status = url.searchParams.get('status') || undefined
 
-    const where = {
-      OR: search ? [
-        { user: { email: { contains: search, mode: 'insensitive' } } },
-        { user: { name: { contains: search, mode: 'insensitive' } } }
-      ] : undefined,
-      type: type || undefined,
-      status: status || undefined
+    // Build MongoDB query
+    const query: any = {}
+    
+    if (search) {
+      query.$or = [
+        { 'userId.email': { $regex: search, $options: 'i' } },
+        { 'userId.name': { $regex: search, $options: 'i' } }
+      ]
+    }
+    
+    if (type) {
+      query.type = type
+    }
+    
+    if (status) {
+      query.status = status
     }
 
     const [logs, total] = await Promise.all([
-      prisma.verificationLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * ITEMS_PER_PAGE,
-        take: ITEMS_PER_PAGE,
-        include: {
-          user: {
-            select: {
-              email: true,
-              name: true
-            }
-          }
-        }
-      }),
-      prisma.verificationLog.count({ where })
+      VerificationLog.find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * ITEMS_PER_PAGE)
+        .limit(ITEMS_PER_PAGE)
+        .populate('userId', 'email name')
+        .lean(),
+      VerificationLog.countDocuments(query)
     ])
 
     return NextResponse.json({

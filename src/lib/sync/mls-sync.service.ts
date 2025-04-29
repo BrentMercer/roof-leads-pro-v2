@@ -1,59 +1,82 @@
-import { PrismaClient } from '@prisma/client'
-import { getMLSToken } from '../mls-auth'
-import { PROPERTY_FIELDS, AGENT_FIELDS } from '../constants/mls-fields'
-import type { MLSTransaction, MLSAgent } from '../types/mls'
+import { fetchMLSData } from '../mls-api'
+import { Transaction } from '../models/transaction'
+import { SyncLog } from '../models/sync-log'
+import type { MLSTransaction } from '../types/mls'
 
-const prisma = new PrismaClient()
-
-// Import MLS API URL from mls-auth.ts
-const MLS_API_URL = 'https://retsapi.raprets.com/2/lab_lbk/RESO/OData'
+const MLS_API_URL = process.env.MLS_API_URL || 'https://api.mlsgrid.com/v2'
 
 export async function syncMLSData() {
-  const syncLog = await createSyncLog('Full')
-  let recordsProcessed = 0
+  const syncLog = await SyncLog.create({
+    type: 'Full',
+    status: 'In Progress',
+    startTime: new Date()
+  })
 
   try {
-    const token = await getMLSToken()
+    const data = await fetchMLSData()
     
-    // Get total counts first
-    const counts = await Promise.all([
-      getStatusCount(token, 'Active'),
-      getStatusCount(token, 'Under Contract'),
-      getStatusCount(token, 'Closed')
+    await Promise.all([
+      processListings(data.Active, 'Active'),
+      processListings(data.UnderContract, 'Under Contract'),
+      processListings(data.Closed, 'Closed')
     ])
 
-    const totalRecords = counts.reduce((a, b) => a + b, 0)
-    console.log(`Total records to process: ${totalRecords}`)
-
-    // Process each status
-    for (const status of ['Active', 'Under Contract', 'Closed']) {
-      await processStatus(token, status, (processed) => {
-        recordsProcessed += processed
-        // Update progress in sync log
-        return updateSyncLog(syncLog.id, {
-          recordsProcessed,
-          status: 'In Progress'
-        })
-      })
-    }
-
-    await updateSyncLog(syncLog.id, {
+    await syncLog.updateOne({
       status: 'Success',
-      recordsProcessed
+      endTime: new Date()
     })
 
+    return syncLog
   } catch (error) {
-    await updateSyncLog(syncLog.id, {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    await syncLog.updateOne({
       status: 'Failed',
-      error: error.message
+      endTime: new Date(),
+      error: errorMessage
     })
-    throw error
+    throw new Error(errorMessage)
+  }
+}
+
+async function processListings(listings: MLSTransaction[], status: string) {
+  const batchSize = 100
+  for (let i = 0; i < listings.length; i += batchSize) {
+    const batch = listings.slice(i, i + batchSize)
+    await Promise.all(batch.map(listing => processListing(listing, status)))
+  }
+}
+
+async function processListing(listing: MLSTransaction, status: string) {
+  try {
+    await Transaction.findOneAndUpdate(
+      { listingKey: listing.ListingKey },
+      {
+        $set: {
+          listPrice: listing.ListPrice,
+          listAgentKey: listing.ListAgentKey,
+          status,
+          lastUpdated: new Date(),
+          ...(listing.Bathrooms && { bathrooms: listing.Bathrooms }),
+          ...(listing.Bedrooms && { bedrooms: listing.Bedrooms }),
+          ...(listing.PropertyType && { propertyType: listing.PropertyType })
+        }
+      },
+      { upsert: true }
+    )
+  } catch (error) {
+    console.error(`Error processing listing ${listing.ListingKey}:`, error)
+    throw error instanceof Error ? error : new Error('Failed to process listing')
   }
 }
 
 export async function getNewPendingContracts(token: string) {
+  const syncLog = await SyncLog.create({
+    type: 'Incremental',
+    status: 'In Progress',
+    startTime: new Date()
+  })
+
   try {
-    // First, let's get active listings
     console.log('Fetching active listings...')
     const activeParams = new URLSearchParams({
       '$filter': "StandardStatus eq 'Active'",
@@ -80,105 +103,34 @@ export async function getNewPendingContracts(token: string) {
     const activeData = await activeResponse.json()
     console.log(`Found ${activeData['@odata.count']} active listings`)
 
-    // Process active listings
     await processListings(activeData.value, 'Active')
 
-    // Then get pending listings
-    console.log('Fetching pending listings...')
-    const pendingParams = new URLSearchParams({
-      '$filter': "StandardStatus eq 'Under Contract'",
-      '$select': 'ListingKey,ListPrice,ListAgentKey,StandardStatus,ModificationTimestamp,ListDate,StreetNumberNumeric,StreetName,City,StateOrProvince,PostalCode',
-      '$orderby': 'ModificationTimestamp desc',
-      '$count': 'true',
-      'class': 'Residential'
-    }).toString()
-
-    // ... similar code for pending and sold listings ...
+    await syncLog.updateOne({
+      status: 'Success',
+      endTime: new Date(),
+      recordsProcessed: activeData['@odata.count']
+    })
 
     return {
-      activeCount: activeData['@odata.count'],
-      pendingCount: pendingData['@odata.count'],
-      soldCount: soldData['@odata.count']
+      activeCount: activeData['@odata.count']
     }
   } catch (error) {
-    console.error('Error in getNewPendingContracts:', error)
-    throw error
-  }
-}
-
-// Helper function to process and store listings
-async function processListings(listings: any[], status: string) {
-  for (const listing of listings) {
-    await prisma.transaction.upsert({
-      where: { ListingKey: listing.ListingKey },
-      update: {
-        ...listing,
-        ModificationTimestamp: new Date(listing.ModificationTimestamp),
-        ListDate: new Date(listing.ListDate),
-        StandardStatus: status
-      },
-      create: {
-        ...listing,
-        ModificationTimestamp: new Date(listing.ModificationTimestamp),
-        ListDate: new Date(listing.ListDate),
-        StandardStatus: status
-      }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    await syncLog.updateOne({
+      status: 'Failed',
+      endTime: new Date(),
+      error: errorMessage
     })
+    throw new Error(errorMessage)
   }
-
-  // Handle pagination using @odata.nextLink if present
-  if (listings['@odata.nextLink']) {
-    const nextResponse = await fetch(listings['@odata.nextLink'], {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-        'Prefer': 'odata.maxpagesize=100'
-      }
-    })
-    const nextData = await nextResponse.json()
-    await processListings(nextData.value, status)
-  }
-}
-
-async function createSyncLog(type: 'Full' | 'Incremental') {
-  return prisma.syncLog.create({
-    data: {
-      type,
-      status: 'In Progress',
-      startTime: new Date()
-    }
-  })
-}
-
-async function updateSyncLog(id: string, data: { 
-  status: 'Success' | 'Failed',
-  recordsProcessed?: number,
-  error?: string,
-  endTime?: Date 
-}) {
-  return prisma.syncLog.update({
-    where: { id },
-    data: {
-      ...data,
-      endTime: data.endTime || new Date()
-    }
-  })
-}
-
-async function getLastSuccessfulSync() {
-  return prisma.syncLog.findFirst({
-    where: {
-      status: 'Success'
-    },
-    orderBy: {
-      endTime: 'desc'
-    }
-  })
 }
 
 export async function syncMLSDataIncremental(token: string) {
-  const syncLog = await createSyncLog('Incremental')
-  let recordsProcessed = 0
+  const syncLog = await SyncLog.create({
+    type: 'Incremental',
+    status: 'In Progress',
+    startTime: new Date()
+  })
   
   try {
     const lastSync = await getLastSuccessfulSync()
@@ -204,19 +156,37 @@ export async function syncMLSDataIncremental(token: string) {
       }
     })
 
-    // ... process response and update database ...
-    recordsProcessed = /* number of records processed */
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Error response:', errorText)
+      throw new Error(`Failed to fetch listings: ${response.status} ${response.statusText}`)
+    }
 
-    await updateSyncLog(syncLog.id, {
+    const data = await response.json()
+    const recordsProcessed = data['@odata.count']
+
+    await syncLog.updateOne({
       status: 'Success',
+      endTime: new Date(),
       recordsProcessed
     })
 
+    return {
+      recordsProcessed
+    }
   } catch (error) {
-    await updateSyncLog(syncLog.id, {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    await syncLog.updateOne({
       status: 'Failed',
-      error: error.message
+      endTime: new Date(),
+      error: errorMessage
     })
-    throw error
+    throw new Error(errorMessage)
   }
+}
+
+async function getLastSuccessfulSync() {
+  return SyncLog.findOne({
+    status: 'Success'
+  }).sort({ endTime: -1 })
 } 

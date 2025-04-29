@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { User } from '@/lib/models/user'
 
 export async function POST(req: Request) {
   try {
     const { token } = await req.json()
 
-    const user = await prisma.user.findUnique({
-      where: {
-        resetToken: token,
-        AND: {
-          resetTokenExpiry: {
-            gt: new Date()
-          }
-        }
-      }
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: new Date() }
     })
 
     if (!user) {

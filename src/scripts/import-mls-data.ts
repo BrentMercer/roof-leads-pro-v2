@@ -1,4 +1,6 @@
-import { prisma } from '../lib/db'
+import { connectDB } from '../lib/mongodb'
+import { Agent } from '../lib/models/agent'
+import { Transaction } from '../lib/models/transaction'
 import type { MLSTransaction, MLSAgent } from '../lib/types/mls'
 
 async function getMLSToken() {
@@ -60,32 +62,37 @@ async function importAgents(agents: MLSAgent[]) {
   let updated = 0
 
   for (const agent of agents) {
-    const result = await prisma.agent.upsert({
-      where: { MemberKey: agent.MemberKey },
-      update: {
-        MemberFirstName: agent.MemberFirstName,
-        MemberLastName: agent.MemberLastName,
-        MemberEmail: agent.MemberEmail,
-        PreferredPhone: agent.PreferredPhone,
-        OfficeName: agent.OfficeName,
-      },
-      create: {
-        MemberKey: agent.MemberKey,
-        MemberFirstName: agent.MemberFirstName,
-        MemberLastName: agent.MemberLastName,
-        MemberEmail: agent.MemberEmail,
-        PreferredPhone: agent.PreferredPhone,
-        OfficeName: agent.OfficeName,
-      },
-    })
+    try {
+      const result = await Agent.findOneAndUpdate(
+        { memberKey: agent.MemberKey },
+        {
+          memberKey: agent.MemberKey,
+          memberKeyNumeric: agent.MemberKeyNumeric,
+          memberMlsId: agent.MemberMlsId,
+          firstName: agent.MemberFirstName,
+          lastName: agent.MemberLastName,
+          fullName: agent.MemberFullName,
+          email: agent.MemberEmail,
+          phone: agent.PreferredPhone,
+          officeName: agent.OfficeName,
+          stateLicense: agent.MemberStateLicense,
+          officeMlsId: agent.OfficeMlsId,
+          officeKeyNumeric: agent.OfficeKeyNumeric,
+          lastUpdated: new Date()
+        },
+        { upsert: true, new: true }
+      )
 
-    if (result.id) {
-      result.createdAt === result.updatedAt ? created++ : updated++
-    }
+      if (result) {
+        result.createdAt?.getTime() === result.updatedAt?.getTime() ? created++ : updated++
+      }
 
-    // Log progress every 100 agents
-    if ((created + updated) % 100 === 0) {
-      console.log(`Processed ${created + updated} agents...`)
+      // Log progress every 100 agents
+      if ((created + updated) % 100 === 0) {
+        console.log(`Processed ${created + updated} agents...`)
+      }
+    } catch (error) {
+      console.error(`Failed to import agent ${agent.MemberKey}:`, error)
     }
   }
 
@@ -99,48 +106,36 @@ async function importListings(listings: MLSTransaction[]) {
 
   for (const listing of listings) {
     try {
-      const result = await prisma.transaction.upsert({
-        where: { ListingKey: listing.ListingKey },
-        update: {
-          ListPrice: listing.ListPrice,
-          StandardStatus: listing.StandardStatus,
-          ModificationTimestamp: new Date(listing.ModificationTimestamp),
-          Bathrooms: listing.Bathrooms,
-          Bedrooms: listing.Bedrooms,
-          LivingArea: listing.LivingArea,
-          YearBuilt: listing.YearBuilt,
-          PropertyType: listing.PropertyType,
-          PropertySubType: listing.PropertySubType,
-          PendingTimestamp: listing.PendingTimestamp ? new Date(listing.PendingTimestamp) : null,
-          CloseDate: listing.CloseDate ? new Date(listing.CloseDate) : null,
-          TaxAnnualAmount: listing.TaxAnnualAmount,
+      const result = await Transaction.findOneAndUpdate(
+        { listingKey: listing.ListingKey },
+        {
+          listingKey: listing.ListingKey,
+          listPrice: listing.ListPrice,
+          listAgentKey: listing.ListAgentKey,
+          status: listing.StandardStatus,
+          modificationTimestamp: new Date(listing.ModificationTimestamp),
+          listDate: new Date(listing.ListDate),
+          streetNumber: listing.StreetNumberNumeric,
+          streetName: listing.StreetName,
+          city: listing.City,
+          state: listing.StateOrProvince,
+          zipCode: listing.PostalCode,
+          bathrooms: listing.Bathrooms,
+          bedrooms: listing.Bedrooms,
+          livingArea: listing.LivingArea,
+          yearBuilt: listing.YearBuilt,
+          propertyType: listing.PropertyType,
+          propertySubType: listing.PropertySubType,
+          pendingTimestamp: listing.PendingTimestamp ? new Date(listing.PendingTimestamp) : null,
+          closeDate: listing.CloseDate ? new Date(listing.CloseDate) : null,
+          taxAnnualAmount: listing.TaxAnnualAmount,
+          lastUpdated: new Date()
         },
-        create: {
-          ListingKey: listing.ListingKey,
-          ListPrice: listing.ListPrice,
-          ListAgentKey: listing.ListAgentKey,
-          StandardStatus: listing.StandardStatus,
-          ModificationTimestamp: new Date(listing.ModificationTimestamp),
-          ListDate: new Date(listing.ListDate),
-          StreetNumberNumeric: listing.StreetNumberNumeric,
-          StreetName: listing.StreetName,
-          City: listing.City,
-          StateOrProvince: listing.StateOrProvince,
-          PostalCode: listing.PostalCode,
-          Bathrooms: listing.Bathrooms,
-          Bedrooms: listing.Bedrooms,
-          LivingArea: listing.LivingArea,
-          YearBuilt: listing.YearBuilt,
-          PropertyType: listing.PropertyType,
-          PropertySubType: listing.PropertySubType,
-          PendingTimestamp: listing.PendingTimestamp ? new Date(listing.PendingTimestamp) : null,
-          CloseDate: listing.CloseDate ? new Date(listing.CloseDate) : null,
-          TaxAnnualAmount: listing.TaxAnnualAmount,
-        }
-      })
+        { upsert: true, new: true }
+      )
 
-      if (result.id) {
-        result.createdAt === result.updatedAt ? created++ : updated++
+      if (result) {
+        result.createdAt?.getTime() === result.updatedAt?.getTime() ? created++ : updated++
       }
 
       // Log progress every 100 listings
@@ -159,6 +154,10 @@ async function main() {
   try {
     console.log('Starting MLS data import...')
     const startTime = Date.now()
+
+    // Connect to MongoDB
+    await connectDB()
+    console.log('Connected to MongoDB')
 
     // Get MLS token
     const token = await getMLSToken()

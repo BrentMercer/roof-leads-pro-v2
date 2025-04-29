@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { User } from '@/lib/models/user'
+import type { AssignedZipCode } from '@/types/user'
 
 export async function POST(req: Request) {
   try {
@@ -22,15 +23,9 @@ export async function POST(req: Request) {
     }
 
     // Check if zip code is already assigned and active
-    const existingAssignment = await prisma.user.findFirst({
-      where: {
-        assignedZipCodes: {
-          some: {
-            zipCode: zipCode,
-            active: true
-          }
-        }
-      }
+    const existingAssignment = await User.findOne({
+      'assignedZipCodes.zipCode': zipCode,
+      'assignedZipCodes.active': true
     })
 
     if (existingAssignment) {
@@ -38,9 +33,7 @@ export async function POST(req: Request) {
     }
 
     // Get the user to assign the zip code to
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    })
+    const user = await User.findById(userId)
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -48,18 +41,17 @@ export async function POST(req: Request) {
 
     // Process the purchase (in a real app, you'd integrate with a payment processor here)
     // For now, we'll just assign the zip code
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        assignedZipCodes: {
-          push: {
-            zipCode: zipCode,
-            purchaseDate: new Date(),
-            active: true
-          }
-        }
-      }
-    })
+    const newZipCode: AssignedZipCode = {
+      zipCode,
+      purchaseDate: new Date(),
+      active: true
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $push: { assignedZipCodes: newZipCode } },
+      { new: true }
+    )
 
     if (!updatedUser) {
       return NextResponse.json({ error: 'Failed to assign zip code' }, { status: 500 })
@@ -67,7 +59,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       message: 'Zip code purchased and assigned successfully',
-      user: updatedUser
+      user: updatedUser.toObject()
     })
   } catch (error) {
     console.error('Error in zip code purchase:', error)

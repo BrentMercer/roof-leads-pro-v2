@@ -1,72 +1,77 @@
 import mongoose from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
 
-// Define sync log schema
+interface SyncLogDocument extends mongoose.Document {
+  type: 'Full' | 'Incremental'
+  status: 'In Progress' | 'Success' | 'Failed'
+  startTime: Date
+  endTime?: Date
+  recordsProcessed?: number
+  error?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 const SyncLogSchema = new mongoose.Schema({
-  status: String,
-  type: String,
-  startTime: Date,
+  type: {
+    type: String,
+    enum: ['Full', 'Incremental'],
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['In Progress', 'Success', 'Failed'],
+    required: true
+  },
+  startTime: {
+    type: Date,
+    required: true
+  },
   endTime: Date,
   recordsProcessed: Number,
-  error: String,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  error: String
+}, {
+  timestamps: true
 })
 
+// Add indexes
+SyncLogSchema.index({ status: 1 })
+SyncLogSchema.index({ startTime: -1 })
+
 // Model
-const SyncLog = mongoose.models.SyncLog || 
-  mongoose.model('SyncLog', SyncLogSchema)
+const SyncLog = mongoose.models.SyncLog || mongoose.model<SyncLogDocument>('SyncLog', SyncLogSchema)
 
 // Helper functions
-const create = async (data: any) => {
+export const create = async (data: {
+  type: 'Full' | 'Incremental'
+  status: 'In Progress' | 'Success' | 'Failed'
+  startTime: Date
+}) => {
   await connectDB()
-  const log = new SyncLog(data)
-  return log.save()
+  const syncLog = new SyncLog(data)
+  return syncLog.save()
 }
 
-const findMany = async (where: any = {}, options: any = {}) => {
+export const update = async (id: string, data: {
+  status?: 'In Progress' | 'Success' | 'Failed'
+  recordsProcessed?: number
+  error?: string
+  endTime?: Date
+}) => {
   await connectDB()
-  
-  let query = SyncLog.find(where)
-  
-  if (options.orderBy) {
-    const [field, direction] = Object.entries(options.orderBy)[0]
-    const sort: any = {}
-    sort[field] = direction === 'asc' ? 1 : -1
-    query = query.sort(sort)
-  }
-  
-  if (options.skip) {
-    query = query.skip(options.skip)
-  }
-  
-  if (options.take) {
-    query = query.limit(options.take)
-  }
-  
-  return query.lean().exec()
-}
-
-const update = async (where: any, data: any) => {
-  await connectDB()
-  if (where.id) {
-    return SyncLog.findByIdAndUpdate(
-      where.id,
-      { ...data, updatedAt: new Date() },
-      { new: true }
-    ).lean().exec()
-  }
-  
-  return SyncLog.findOneAndUpdate(
-    where,
-    { ...data, updatedAt: new Date() },
+  return SyncLog.findByIdAndUpdate(
+    id,
+    {
+      ...data,
+      endTime: data.endTime || new Date()
+    },
     { new: true }
   ).lean().exec()
 }
 
-export {
-  SyncLog,
-  create,
-  findMany,
-  update
-} 
+export const findFirst = async (query: Record<string, any>) => {
+  await connectDB()
+  return SyncLog.findOne(query).sort({ endTime: -1 }).lean().exec()
+}
+
+export { SyncLog } 

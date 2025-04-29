@@ -25,20 +25,34 @@ export interface MLSTransaction {
 
 export interface MLSAgent {
   MemberKey: string
+  MemberKeyNumeric: number
+  MemberMlsId: string
   MemberFirstName: string
   MemberLastName: string
-  MemberEmail?: string
+  MemberFullName: string
+  MemberEmail: string
   PreferredPhone?: string
-  OfficeName?: string
+  OfficeName: string
+  MemberStateLicense?: string
+  OfficeMlsId?: string
+  OfficeKeyNumeric?: number
+  ModificationTimestamp: string
 }
 
 export interface MLSAgentDocument extends Document {
   memberKey: string
-  memberFirstName: string
-  memberLastName: string
-  memberEmail?: string
-  preferredPhone?: string
-  officeName?: string
+  memberKeyNumeric: number
+  memberMlsId: string
+  firstName: string
+  lastName: string
+  fullName: string
+  email: string
+  phone?: string
+  officeName: string
+  stateLicense?: string
+  officeMlsId?: string
+  officeKeyNumeric?: number
+  lastUpdated: Date
   _id: string
   __v: number
 }
@@ -47,16 +61,24 @@ export interface MLSListingDocument extends Document {
   listingKey: string
   listPrice: number
   listAgentKey: string
-  standardStatus: string
+  status: string
   modificationTimestamp: Date
   listDate: Date
-  streetNumberNumeric: string
+  streetNumber: string
   streetName: string
   city: string
-  stateOrProvince: string
-  standardFields: {
-    postalCode: string
-  }
+  state: string
+  zipCode: string
+  bathrooms?: number
+  bedrooms?: number
+  livingArea?: number
+  yearBuilt?: number
+  propertyType?: string
+  propertySubType?: string
+  pendingTimestamp?: Date
+  closeDate?: Date
+  taxAnnualAmount?: number
+  lastUpdated: Date
   _id: string
   __v: number
 } 

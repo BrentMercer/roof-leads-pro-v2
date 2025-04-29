@@ -2,6 +2,18 @@ import mongoose from 'mongoose'
 import { connectDB } from '@/lib/mongodb'
 import type { UserDocument } from '@/lib/types/user'
 
+interface VerificationToken {
+  token: string
+  expires: Date
+}
+
+interface ZipCodeAssignment {
+  zipCode: string
+  purchaseDate: Date
+  active: boolean
+  source: 'PURCHASE' | 'ADMIN_ASSIGN' | 'GIFT'
+}
+
 // Define user schema
 const UserSchema = new mongoose.Schema({
   name: String,
@@ -34,7 +46,12 @@ const UserSchema = new mongoose.Schema({
   assignedZipCodes: [{
     zipCode: { type: String, required: true },
     purchaseDate: { type: Date, default: Date.now },
-    active: { type: Boolean, default: true }
+    active: { type: Boolean, default: true },
+    source: { 
+      type: String, 
+      enum: ['PURCHASE', 'ADMIN_ASSIGN', 'GIFT'],
+      default: 'PURCHASE'
+    }
   }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -48,8 +65,8 @@ UserSchema.index({ email: 1 }, { unique: true })
 // Model
 const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema)
 
-// Prisma-like helper functions
-const findUnique = async (where: any) => {
+// Helper functions with proper typing
+export const findUnique = async (where: { id?: string; email?: string }) => {
   await connectDB()
   if (where.id) {
     return User.findById(where.id).lean().exec()
@@ -57,7 +74,13 @@ const findUnique = async (where: any) => {
   return User.findOne(where).lean().exec()
 }
 
-const findMany = async (query: any) => {
+export const findMany = async (query: {
+  select?: Record<string, number>
+  where?: Record<string, any>
+  orderBy?: Record<string, 1 | -1>
+  skip?: number
+  take?: number
+}) => {
   await connectDB()
   let mongoQuery = User.find()
 
@@ -84,18 +107,18 @@ const findMany = async (query: any) => {
   return mongoQuery.lean().exec()
 }
 
-const findFirst = async (where: any) => {
+export const findFirst = async (where: Record<string, any>) => {
   await connectDB()
   return User.findOne(where).lean().exec()
 }
 
-const create = async (data: any) => {
+export const create = async (data: Partial<UserDocument>) => {
   await connectDB()
   const newUser = new User(data)
   return newUser.save()
 }
 
-const update = async (where: any, data: any) => {
+export const update = async (where: { id?: string; email?: string }, data: Partial<UserDocument>) => {
   await connectDB()
   if (where.id) {
     return User.findByIdAndUpdate(where.id, data, { new: true }).lean().exec()
@@ -103,7 +126,7 @@ const update = async (where: any, data: any) => {
   return User.findOneAndUpdate(where, data, { new: true }).lean().exec()
 }
 
-const deleteUser = async (where: any) => {
+export const deleteUser = async (where: { id?: string; email?: string }) => {
   await connectDB()
   if (where.id) {
     return User.findByIdAndDelete(where.id).lean().exec()
@@ -111,77 +134,59 @@ const deleteUser = async (where: any) => {
   return User.findOneAndDelete(where).lean().exec()
 }
 
-// New helper functions for zip code management
-const addZipCode = async (userId: string, zipCode: string) => {
+export const addZipCode = async (userId: string, zipCode: string) => {
   await connectDB()
   return User.findByIdAndUpdate(
     userId,
-    { 
-      $push: { 
-        assignedZipCodes: { 
+    {
+      $push: {
+        assignedZipCodes: {
           zipCode,
           purchaseDate: new Date(),
-          active: true
-        } 
-      } 
+          active: true,
+          source: 'PURCHASE'
+        }
+      }
     },
     { new: true }
   ).lean().exec()
 }
 
-const removeZipCode = async (userId: string, zipCode: string) => {
+export const removeZipCode = async (userId: string, zipCode: string) => {
   await connectDB()
   return User.findByIdAndUpdate(
     userId,
-    { 
-      $pull: { 
-        assignedZipCodes: { 
-          zipCode 
-        } 
-      } 
+    {
+      $pull: {
+        assignedZipCodes: { zipCode }
+      }
     },
     { new: true }
   ).lean().exec()
 }
 
-const deactivateZipCode = async (userId: string, zipCode: string) => {
+export const deactivateZipCode = async (userId: string, zipCode: string) => {
   await connectDB()
   return User.findOneAndUpdate(
-    { 
+    {
       _id: userId,
       'assignedZipCodes.zipCode': zipCode
     },
-    { 
-      $set: { 
-        'assignedZipCodes.$.active': false 
-      } 
+    {
+      $set: {
+        'assignedZipCodes.$.active': false
+      }
     },
     { new: true }
   ).lean().exec()
 }
 
-const getUsersByZipCode = async (zipCode: string) => {
+export const getUsersByZipCode = async (zipCode: string) => {
   await connectDB()
   return User.find({
-    'assignedZipCodes': {
-      $elemMatch: {
-        zipCode,
-        active: true
-      }
-    }
+    'assignedZipCodes.zipCode': zipCode,
+    'assignedZipCodes.active': true
   }).lean().exec()
 }
 
-export { 
-  User,
-  findUnique,
-  findMany,
-  findFirst,
-  create,
-  update,
-  deleteUser as delete,
-  addZipCode,
-  removeZipCode,
-  deactivateZipCode,
-  getUsersByZipCode
-} 
+export { User } 
