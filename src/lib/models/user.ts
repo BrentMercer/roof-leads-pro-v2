@@ -66,7 +66,7 @@ UserSchema.index({ email: 1 }, { unique: true })
 const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema)
 
 // Helper functions with proper typing
-export const findUnique = async (where: { id?: string; email?: string }) => {
+export const findUnique = async (where: Record<string, any>) => {
   await connectDB()
   if (where.id) {
     return User.findById(where.id).lean().exec()
