@@ -13,7 +13,7 @@ interface TransactionFiltersWrapperProps {
   timeFrame: string
   priceRange: string
   zipCode: string
-  zipCodes: string[]
+  zipCodes: Array<{ code: string, count: number }>
   totalResults: number
 }
 
