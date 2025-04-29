@@ -51,7 +51,7 @@ export default function ResetPassword() {
     if (!validation.isValid) {
       toast({
         title: "Error",
-        description: validation.error,
+        description: validation.errors.join(', '),
         variant: "destructive",
       })
       return
