@@ -11,8 +11,14 @@ async function getSyncStatus() {
   const db = (await connectDB()).db
   if (!db) throw new Error("Failed to connect to database")
   
-  const status = await db.collection('syncstatus').findOne({ _id: 'mls_sync' })
-  return status || { lastSyncedAt: new Date(), status: 'never' }
+  const status = await db.collection('syncstatus').findOne({ id: 'mls_sync' })
+  
+  return {
+    lastSyncedAt: status?.lastSyncedAt ? new Date(status.lastSyncedAt) : new Date(),
+    status: status?.status || 'never',
+    completedAt: status?.completedAt ? new Date(status.completedAt) : undefined,
+    error: status?.error
+  }
 }
 
 export default async function SyncDashboard() {
