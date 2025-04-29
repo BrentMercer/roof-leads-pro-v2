@@ -8,9 +8,10 @@ import { useToast } from '@/components/ui/use-toast'
 
 interface TwoFactorSetupProps {
   onSuccess?: () => void
+  onError?: (message: string) => void
 }
 
-export function TwoFactorSetup({ onSuccess }: TwoFactorSetupProps) {
+export function TwoFactorSetup({ onSuccess, onError }: TwoFactorSetupProps) {
   const [isEnabled, setIsEnabled] = useState(false)
   const [qrCode, setQrCode] = useState('')
   const [secret, setSecret] = useState('')
@@ -32,11 +33,13 @@ export function TwoFactorSetup({ onSuccess }: TwoFactorSetupProps) {
       setSecret(data.secret)
       setIsEnabled(true)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to setup 2FA'
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to setup 2FA',
+        description: errorMessage,
         variant: 'destructive'
       })
+      onError?.(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -66,11 +69,13 @@ export function TwoFactorSetup({ onSuccess }: TwoFactorSetupProps) {
       })
       onSuccess?.()
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Invalid verification code'
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Invalid verification code',
+        description: errorMessage,
         variant: 'destructive'
       })
+      onError?.(errorMessage)
     } finally {
       setIsLoading(false)
       setVerificationCode('')
