@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/dialog'
 
 interface UserManagementProps {
-  initialUsers: UserDocument[]
+  users: UserDocument[]
 }
 
 const toggleRole = (currentRole: UserRole): UserRole => {
@@ -47,8 +47,8 @@ const toggleRole = (currentRole: UserRole): UserRole => {
   }
 }
 
-export function UserManagement({ initialUsers }: UserManagementProps) {
-  const [users, setUsers] = useState<UserDocument[]>(initialUsers)
+export function UserManagement({ users }: UserManagementProps) {
+  const [userList, setUserList] = useState<UserDocument[]>(users)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserDocument | null>(null)
 
@@ -63,13 +63,13 @@ export function UserManagement({ initialUsers }: UserManagementProps) {
       if (!response.ok) throw new Error('Failed to update user')
 
       const updatedUser = await response.json()
-      setUsers(users.map(user => user._id === userId ? updatedUser : user))
+      setUserList(userList.map(user => user._id === userId ? updatedUser : user))
     } catch (error) {
       console.error('Error updating user:', error)
     }
   }
 
-  const filteredUsers = users.filter(user =>
+  const filteredUsers = userList.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
