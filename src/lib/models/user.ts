@@ -65,11 +65,10 @@ const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSc
 
 // Helper functions with proper typing
 export const findUnique = async (where: Record<string, any>) => {
-  await connectDB()
   if (where.id) {
-    return User.findById(where.id).lean().exec()
+    return User.findById(where.id)
   }
-  return User.findOne(where).lean().exec()
+  return User.findOne(where)
 }
 
 export const findMany = async (query: {
@@ -116,12 +115,19 @@ export const create = async (data: Partial<UserDocument>) => {
   return newUser.save()
 }
 
-export const update = async (where: { id?: string; email?: string }, data: any) => {
-  await connectDB()
+export const update = async (
+  where: Record<string, any>,
+  data: any,
+  options?: { arrayFilters?: any[] }
+) => {
   if (where.id) {
-    return User.findByIdAndUpdate(where.id, data, { new: true }).lean().exec()
+    return User.findByIdAndUpdate(
+      where.id,
+      data,
+      { new: true, arrayFilters: options?.arrayFilters }
+    )
   }
-  return User.findOneAndUpdate(where, data, { new: true }).lean().exec()
+  return User.findOneAndUpdate(where, data, { new: true, arrayFilters: options?.arrayFilters })
 }
 
 export const deleteUser = async (where: { id?: string; email?: string }) => {

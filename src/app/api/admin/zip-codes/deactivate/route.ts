@@ -41,15 +41,16 @@ export async function POST(req: Request) {
 
     // Update the zip code assignment to inactive
     const updatedUser = await update(
-      { 
-        id: userId,
-        'assignedZipCodes.zipCode': zipCode,
-        'assignedZipCodes.active': true
-      },
+      { id: userId },
       {
         $set: {
-          'assignedZipCodes.$.active': false
+          'assignedZipCodes.$[elem].active': false
         }
+      },
+      {
+        arrayFilters: [
+          { 'elem.zipCode': zipCode, 'elem.active': true }
+        ]
       }
     ) as User
 
