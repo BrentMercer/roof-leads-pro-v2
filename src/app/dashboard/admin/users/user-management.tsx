@@ -47,7 +47,7 @@ const toggleRole = (currentRole: UserRole): UserRole => {
   }
 }
 
-export default function UserManagement({ initialUsers }: UserManagementProps) {
+export function UserManagement({ initialUsers }: UserManagementProps) {
   const [users, setUsers] = useState<UserDocument[]>(initialUsers)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserDocument | null>(null)
