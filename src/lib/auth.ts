@@ -1,34 +1,33 @@
-import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
-import { NextAuthOptions } from 'next-auth';
+import { AuthOptions, SessionStrategy } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import GoogleProvider from 'next-auth/providers/google';
-import clientPromise, { getMongoDBAdapter } from './mongodb-adapter';
+import { getMongoDBAdapter } from './mongodb-adapter';
 import { connectToDatabase } from './mongodb';
+import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 
-export const authOptions: NextAuthOptions = {
+export const authOptions: AuthOptions = {
   adapter: getMongoDBAdapter(),
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Please enter an email and password');
+          throw new Error('Email and password are required');
         }
 
-        const { db } = await connectToDatabase();
-        const user = await db.collection('users').findOne({ email: credentials.email });
+        await connectToDatabase();
+        const user = await User.findOne({ email: credentials.email });
 
         if (!user) {
           throw new Error('No user found with this email');
+        }
+
+        if (!user.emailVerified) {
+          throw new Error('Please verify your email before signing in');
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
@@ -43,30 +42,34 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
         };
-      },
-    }),
+      }
+    })
   ],
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as SessionStrategy,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: '/auth',
+    error: '/auth',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
-        token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user && token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+    async session({ session, token }: any) {
+      if (session?.user) {
+        session.user.role = token.role;
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith(baseUrl)) return url;
+      return baseUrl;
+    }
   },
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
+  secret: process.env.NEXTAUTH_SECRET,
 }; 
