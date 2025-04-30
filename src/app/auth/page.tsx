@@ -6,7 +6,12 @@ import { signIn } from 'next-auth/react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import ReCAPTCHA from 'react-google-recaptcha';
+import dynamic from 'next/dynamic';
+
+// Dynamically import ReCAPTCHA with no SSR
+const ReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
+  ssr: false,
+});
 
 // Add global type declarations
 declare global {
@@ -45,9 +50,16 @@ export default function Auth() {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
     // Handle email verification
     const verifyToken = searchParams?.get('verify');
     if (verifyToken) {
@@ -71,7 +83,7 @@ export default function Auth() {
     // Log reCAPTCHA initialization
     console.log('reCAPTCHA site key:', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
     console.log('reCAPTCHA ref:', recaptchaRef.current);
-  }, [searchParams]);
+  }, [searchParams, isMounted]);
 
   const verifyEmail = async (token: string) => {
     setIsLoading(true);
@@ -301,7 +313,7 @@ export default function Auth() {
             )}
 
             {/* Register Form */}
-            {activeTab === 'register' && (
+            {activeTab === 'register' && isMounted && (
               <form className="mt-6 space-y-6" onSubmit={handleRegisterSubmit(handleRegister)}>
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700">
