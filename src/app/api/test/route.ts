@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
+import mongoose from 'mongoose';
 
 export async function GET() {
   try {
-    const { db } = await connectToDatabase();
-    const collections = await db.listCollections().toArray();
+    const conn = await connectToDatabase();
+    if (!conn.connection?.db) {
+      throw new Error('MongoDB connection not established');
+    }
+    const collections = await conn.connection.db.listCollections().toArray();
     return NextResponse.json({ 
       status: 'success', 
       message: 'MongoDB connection successful',
