@@ -14,12 +14,13 @@ export async function POST(request: Request) {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`,
+      body: `secret=${process.env.NEXT_PUBLIC_RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`,
     });
 
     const recaptchaData = await recaptchaResponse.json();
 
     if (!recaptchaData.success) {
+      console.error('reCAPTCHA verification failed:', recaptchaData);
       return NextResponse.json(
         { message: 'reCAPTCHA verification failed' },
         { status: 400 }

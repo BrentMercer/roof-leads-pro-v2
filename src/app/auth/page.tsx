@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -39,13 +39,21 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function Auth() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
+    // Handle email verification
+    const verifyToken = searchParams?.get('verify');
+    if (verifyToken) {
+      verifyEmail(verifyToken);
+    }
+
     // Initialize reCAPTCHA callback functions
     window.onRecaptchaSuccess = (token: string) => {
       console.log('reCAPTCHA success callback:', token);
@@ -63,7 +71,36 @@ export default function Auth() {
     // Log reCAPTCHA initialization
     console.log('reCAPTCHA site key:', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
     console.log('reCAPTCHA ref:', recaptchaRef.current);
-  }, []);
+  }, [searchParams]);
+
+  const verifyEmail = async (token: string) => {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Verification failed');
+      }
+
+      setSuccess('Email verified successfully! You can now sign in.');
+      setActiveTab('login');
+    } catch (error: any) {
+      setError(error.message || 'An error occurred during verification');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const {
     register: registerLogin,
@@ -84,6 +121,7 @@ export default function Auth() {
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       const result = await signIn('credentials', {
@@ -108,6 +146,7 @@ export default function Auth() {
     console.log('Starting registration process...');
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       if (!recaptchaToken) {
@@ -140,7 +179,7 @@ export default function Auth() {
       setRecaptchaToken(null);
 
       // Show success message and switch to login tab
-      setError('Registration successful! Please check your email to verify your account.');
+      setSuccess('Registration successful! Please check your email to verify your account.');
       setActiveTab('login');
     } catch (error: any) {
       console.error('Registration error:', error);
@@ -158,6 +197,7 @@ export default function Auth() {
   const handleTabChange = (tab: 'login' | 'register') => {
     setActiveTab(tab);
     setError('');
+    setSuccess('');
     setRecaptchaToken(null);
     if (recaptchaRef.current) {
       recaptchaRef.current.reset();
@@ -200,12 +240,14 @@ export default function Auth() {
             </div>
 
             {error && (
-              <div className={`mt-4 p-4 rounded-md ${
-                error.includes('successful') 
-                  ? 'bg-green-50 text-green-700' 
-                  : 'bg-red-50 text-red-700'
-              }`}>
+              <div className="mt-4 p-4 rounded-md bg-red-50 text-red-700">
                 {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="mt-4 p-4 rounded-md bg-green-50 text-green-700">
+                {success}
               </div>
             )}
 
