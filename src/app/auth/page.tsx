@@ -207,206 +207,204 @@ export default function Auth() {
   };
 
   return (
-    <>
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {activeTab === 'login' ? 'Sign in to your account' : 'Create your account'}
-          </h2>
-        </div>
+    <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
+          {activeTab === 'login' ? 'Sign in to your account' : 'Create your account'}
+        </h2>
+      </div>
 
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            {/* Tabs */}
-            <div className="flex border-b border-gray-200">
-              <button
-                className={`flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm ${
-                  activeTab === 'login'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-                onClick={() => handleTabChange('login')}
-              >
-                Sign in
-              </button>
-              <button
-                className={`flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm ${
-                  activeTab === 'register'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-                onClick={() => handleTabChange('register')}
-              >
-                Register
-              </button>
-            </div>
-
-            {error && (
-              <div className="mt-4 p-4 rounded-md bg-red-50 text-red-700">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="mt-4 p-4 rounded-md bg-green-50 text-green-700">
-                {success}
-              </div>
-            )}
-
-            {/* Login Form */}
-            {activeTab === 'login' && (
-              <form className="mt-6 space-y-6" onSubmit={handleLoginSubmit(handleLogin)}>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email address
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="email"
-                      type="email"
-                      {...registerLogin('email')}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    {loginErrors.email && (
-                      <p className="mt-1 text-sm text-red-600">{loginErrors.email.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Password
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="password"
-                      type="password"
-                      {...registerLogin('password')}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    {loginErrors.password && (
-                      <p className="mt-1 text-sm text-red-600">{loginErrors.password.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    {isLoading ? 'Signing in...' : 'Sign in'}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Register Form */}
-            {activeTab === 'register' && isMounted && (
-              <form className="mt-6 space-y-6" onSubmit={handleRegisterSubmit(handleRegister)}>
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Full Name
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="name"
-                      type="text"
-                      {...registerRegister('name')}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    {registerErrors.name && (
-                      <p className="mt-1 text-sm text-red-600">{registerErrors.name.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email address
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="email"
-                      type="email"
-                      {...registerRegister('email')}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    {registerErrors.email && (
-                      <p className="mt-1 text-sm text-red-600">{registerErrors.email.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Password
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="password"
-                      type="password"
-                      {...registerRegister('password')}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    {registerErrors.password && (
-                      <p className="mt-1 text-sm text-red-600">{registerErrors.password.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                    Phone Number (Optional)
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="phone"
-                      type="tel"
-                      {...registerRegister('phone')}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    {registerErrors.phone && (
-                      <p className="mt-1 text-sm text-red-600">{registerErrors.phone.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex justify-center">
-                  <ReCAPTCHA
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                    onChange={(token) => {
-                      console.log('reCAPTCHA token received:', token);
-                      setRecaptchaToken(token);
-                    }}
-                    onExpired={() => {
-                      console.log('reCAPTCHA expired');
-                      setRecaptchaToken(null);
-                    }}
-                    onErrored={() => {
-                      console.log('reCAPTCHA error');
-                      setRecaptchaToken(null);
-                    }}
-                    size="normal"
-                    theme="light"
-                  />
-                </div>
-
-                <div>
-                  <button
-                    type="submit"
-                    disabled={isLoading || !recaptchaToken}
-                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    {isLoading ? 'Creating account...' : 'Create account'}
-                  </button>
-                </div>
-              </form>
-            )}
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-card py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {/* Tabs */}
+          <div className="flex border-b border-border">
+            <button
+              className={`flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm ${
+                activeTab === 'login'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
+              onClick={() => handleTabChange('login')}
+            >
+              Sign in
+            </button>
+            <button
+              className={`flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm ${
+                activeTab === 'register'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
+              onClick={() => handleTabChange('register')}
+            >
+              Register
+            </button>
           </div>
+
+          {error && (
+            <div className="mt-4 p-4 rounded-md bg-destructive/10 text-destructive">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mt-4 p-4 rounded-md bg-green-500/10 text-green-500">
+              {success}
+            </div>
+          )}
+
+          {/* Login Form */}
+          {activeTab === 'login' && (
+            <form className="mt-6 space-y-6" onSubmit={handleLoginSubmit(handleLogin)}>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">
+                  Email address
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="email"
+                    type="email"
+                    {...registerLogin('email')}
+                    className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  />
+                  {loginErrors.email && (
+                    <p className="mt-1 text-sm text-destructive">{loginErrors.email.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
+                  Password
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="password"
+                    type="password"
+                    {...registerLogin('password')}
+                    className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  />
+                  {loginErrors.password && (
+                    <p className="mt-1 text-sm text-destructive">{loginErrors.password.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+                >
+                  {isLoading ? 'Signing in...' : 'Sign in'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Register Form */}
+          {activeTab === 'register' && isMounted && (
+            <form className="mt-6 space-y-6" onSubmit={handleRegisterSubmit(handleRegister)}>
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-foreground">
+                  Full Name
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="name"
+                    type="text"
+                    {...registerRegister('name')}
+                    className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  />
+                  {registerErrors.name && (
+                    <p className="mt-1 text-sm text-destructive">{registerErrors.name.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">
+                  Email address
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="email"
+                    type="email"
+                    {...registerRegister('email')}
+                    className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  />
+                  {registerErrors.email && (
+                    <p className="mt-1 text-sm text-destructive">{registerErrors.email.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
+                  Password
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="password"
+                    type="password"
+                    {...registerRegister('password')}
+                    className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  />
+                  {registerErrors.password && (
+                    <p className="mt-1 text-sm text-destructive">{registerErrors.password.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-foreground">
+                  Phone Number (Optional)
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="phone"
+                    type="tel"
+                    {...registerRegister('phone')}
+                    className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  />
+                  {registerErrors.phone && (
+                    <p className="mt-1 text-sm text-destructive">{registerErrors.phone.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                  onChange={(token) => {
+                    console.log('reCAPTCHA token received:', token);
+                    setRecaptchaToken(token);
+                  }}
+                  onExpired={() => {
+                    console.log('reCAPTCHA expired');
+                    setRecaptchaToken(null);
+                  }}
+                  onErrored={() => {
+                    console.log('reCAPTCHA error');
+                    setRecaptchaToken(null);
+                  }}
+                  size="normal"
+                  theme="light"
+                />
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={isLoading || !recaptchaToken}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+                >
+                  {isLoading ? 'Creating account...' : 'Create account'}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 } 
