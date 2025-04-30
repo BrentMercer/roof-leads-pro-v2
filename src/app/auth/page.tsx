@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import dynamic from 'next/dynamic';
+import type { ReCAPTCHAProps } from 'react-google-recaptcha';
 
 // Dynamically import ReCAPTCHA with no SSR
-const ReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
+const ReCAPTCHA = dynamic<ReCAPTCHAProps>(() => import('react-google-recaptcha'), {
   ssr: false,
 });
 
@@ -51,7 +52,6 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -82,7 +82,6 @@ export default function Auth() {
 
     // Log reCAPTCHA initialization
     console.log('reCAPTCHA site key:', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
-    console.log('reCAPTCHA ref:', recaptchaRef.current);
   }, [searchParams, isMounted]);
 
   const verifyEmail = async (token: string) => {
@@ -185,9 +184,6 @@ export default function Auth() {
       }
 
       // Reset reCAPTCHA
-      if (recaptchaRef.current) {
-        recaptchaRef.current.reset();
-      }
       setRecaptchaToken(null);
 
       // Show success message and switch to login tab
@@ -197,9 +193,6 @@ export default function Auth() {
       console.error('Registration error:', error);
       setError(error.message);
       // Reset reCAPTCHA on error
-      if (recaptchaRef.current) {
-        recaptchaRef.current.reset();
-      }
       setRecaptchaToken(null);
     } finally {
       setIsLoading(false);
@@ -211,9 +204,6 @@ export default function Auth() {
     setError('');
     setSuccess('');
     setRecaptchaToken(null);
-    if (recaptchaRef.current) {
-      recaptchaRef.current.reset();
-    }
   };
 
   return (
@@ -385,7 +375,6 @@ export default function Auth() {
 
                 <div className="flex justify-center">
                   <ReCAPTCHA
-                    ref={recaptchaRef}
                     sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
                     onChange={(token) => {
                       console.log('reCAPTCHA token received:', token);
