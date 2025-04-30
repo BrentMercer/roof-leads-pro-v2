@@ -6,7 +6,16 @@ import { signIn } from 'next-auth/react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import Script from 'next/script';
+import ReCAPTCHA from 'react-google-recaptcha';
+
+// Add global type declarations
+declare global {
+  interface Window {
+    onRecaptchaSuccess: (token: string) => void;
+    onRecaptchaExpired: () => void;
+    onRecaptchaError: () => void;
+  }
+}
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -34,22 +43,27 @@ export default function Auth() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
-    if (activeTab === 'register' && recaptchaRef.current) {
-      // @ts-ignore
-      window.grecaptcha.ready(() => {
-        // @ts-ignore
-        window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
-          callback: (token: string) => setRecaptchaToken(token),
-          'expired-callback': () => setRecaptchaToken(null),
-          'error-callback': () => setRecaptchaToken(null),
-        });
-      });
-    }
-  }, [activeTab]);
+    // Initialize reCAPTCHA callback functions
+    window.onRecaptchaSuccess = (token: string) => {
+      console.log('reCAPTCHA success callback:', token);
+      setRecaptchaToken(token);
+    };
+    window.onRecaptchaExpired = () => {
+      console.log('reCAPTCHA expired callback');
+      setRecaptchaToken(null);
+    };
+    window.onRecaptchaError = () => {
+      console.log('reCAPTCHA error callback');
+      setRecaptchaToken(null);
+    };
+
+    // Log reCAPTCHA initialization
+    console.log('reCAPTCHA site key:', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+    console.log('reCAPTCHA ref:', recaptchaRef.current);
+  }, []);
 
   const {
     register: registerLogin,
@@ -82,7 +96,7 @@ export default function Auth() {
         throw new Error(result.error);
       }
 
-      router.push('/dashboard');
+      router.push('/');
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -91,15 +105,16 @@ export default function Auth() {
   };
 
   const handleRegister = async (data: RegisterFormData) => {
-    if (!recaptchaToken) {
-      setError('Please complete the reCAPTCHA verification');
-      return;
-    }
-
+    console.log('Starting registration process...');
     setIsLoading(true);
     setError('');
 
     try {
+      if (!recaptchaToken) {
+        throw new Error('Please complete the reCAPTCHA verification');
+      }
+
+      console.log('Sending registration request...');
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -112,25 +127,45 @@ export default function Auth() {
       });
 
       const result = await response.json();
+      console.log('Registration response:', result);
 
       if (!response.ok) {
         throw new Error(result.message || 'Registration failed');
       }
 
-      router.push('/auth/verify-email');
+      // Reset reCAPTCHA
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+      setRecaptchaToken(null);
+
+      // Show success message and switch to login tab
+      setError('Registration successful! Please check your email to verify your account.');
+      setActiveTab('login');
     } catch (error: any) {
+      console.error('Registration error:', error);
       setError(error.message);
+      // Reset reCAPTCHA on error
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+      setRecaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleTabChange = (tab: 'login' | 'register') => {
+    setActiveTab(tab);
+    setError('');
+    setRecaptchaToken(null);
+    if (recaptchaRef.current) {
+      recaptchaRef.current.reset();
+    }
+  };
+
   return (
     <>
-      <Script
-        src={`https://www.google.com/recaptcha/api.js?render=explicit`}
-        strategy="afterInteractive"
-      />
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -148,7 +183,7 @@ export default function Auth() {
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
-                onClick={() => setActiveTab('login')}
+                onClick={() => handleTabChange('login')}
               >
                 Sign in
               </button>
@@ -158,14 +193,18 @@ export default function Auth() {
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
-                onClick={() => setActiveTab('register')}
+                onClick={() => handleTabChange('register')}
               >
                 Register
               </button>
             </div>
 
             {error && (
-              <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-md">
+              <div className={`mt-4 p-4 rounded-md ${
+                error.includes('successful') 
+                  ? 'bg-green-50 text-green-700' 
+                  : 'bg-red-50 text-red-700'
+              }`}>
                 {error}
               </div>
             )}
@@ -291,7 +330,24 @@ export default function Auth() {
                 </div>
 
                 <div className="flex justify-center">
-                  <div ref={recaptchaRef} />
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    onChange={(token) => {
+                      console.log('reCAPTCHA token received:', token);
+                      setRecaptchaToken(token);
+                    }}
+                    onExpired={() => {
+                      console.log('reCAPTCHA expired');
+                      setRecaptchaToken(null);
+                    }}
+                    onErrored={() => {
+                      console.log('reCAPTCHA error');
+                      setRecaptchaToken(null);
+                    }}
+                    size="normal"
+                    theme="light"
+                  />
                 </div>
 
                 <div>

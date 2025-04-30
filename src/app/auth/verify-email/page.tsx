@@ -12,17 +12,15 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     const verifyEmail = async () => {
-      const token = searchParams.get('token');
-      console.log('Verification token from URL:', token);
+      const token = searchParams?.get('token');
       
       if (!token) {
         setVerificationStatus('error');
-        setError('No verification token provided');
+        setError('Invalid verification link. Please try clicking the link in your email again.');
         return;
       }
 
       try {
-        console.log('Sending verification request...');
         const response = await fetch('/api/auth/verify-email', {
           method: 'POST',
           headers: {
@@ -32,7 +30,6 @@ export default function VerifyEmail() {
         });
 
         const data = await response.json();
-        console.log('Verification response:', data);
 
         if (!response.ok) {
           throw new Error(data.message || 'Verification failed');
@@ -44,7 +41,6 @@ export default function VerifyEmail() {
           router.push('/auth');
         }, 3000);
       } catch (error: any) {
-        console.error('Verification error:', error);
         setVerificationStatus('error');
         setError(error.message);
       }
