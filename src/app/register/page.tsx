@@ -10,6 +10,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import type { ReCAPTCHAProps } from 'react-google-recaptcha';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
+import { signIn } from 'next-auth/react';
 
 // Dynamically import ReCAPTCHA with no SSR
 const ReCAPTCHA = dynamic<ReCAPTCHAProps>(() => import('react-google-recaptcha'), {
@@ -192,6 +194,27 @@ export default function RegisterPage() {
               {success}
             </div>
           )}
+
+          <div className="mb-6">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={() => signIn('google', { callbackUrl: '/' })}
+            >
+              <FcGoogle className="h-5 w-5" />
+              Continue with Google
+            </Button>
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-card text-muted-foreground">Or sign up with email</span>
+            </div>
+          </div>
 
           <form className="space-y-6" onSubmit={handleSubmit(handleRegister)}>
             <div>
