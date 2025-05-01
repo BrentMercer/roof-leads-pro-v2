@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server';
 import { sendVerificationEmail } from '@/lib/email';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Check for test header to prevent accidental calls
+    const testHeader = request.headers.get('x-test-email');
+    if (!testHeader || testHeader !== 'true') {
+      return NextResponse.json(
+        { message: 'Test email endpoint requires x-test-email header' },
+        { status: 403 }
+      );
+    }
+
     const testEmail = 'test@example.com';
     const testToken = 'test-token-123';
     

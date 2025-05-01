@@ -27,7 +27,7 @@ export const authOptions: AuthOptions = {
         }
 
         if (!user.emailVerified) {
-          throw new Error('Please verify your email before signing in');
+          throw new Error('Please verify your email before logging in');
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
@@ -50,26 +50,24 @@ export const authOptions: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
-    signIn: '/auth',
-    error: '/auth',
+    signIn: '/login',
+    error: '/login',
   },
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
+        token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }: any) {
-      if (session?.user) {
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id;
         session.user.role = token.role;
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      if (url.startsWith(baseUrl)) return url;
-      return baseUrl;
-    }
   },
   secret: process.env.NEXTAUTH_SECRET,
 }; 
