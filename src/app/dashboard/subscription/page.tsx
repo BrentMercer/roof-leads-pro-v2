@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusIcon, MapPinIcon, CreditCardIcon } from 'lucide-react';
+import { PlusIcon, CreditCardIcon } from 'lucide-react';
 
 export default function SubscriptionPage() {
   return (
