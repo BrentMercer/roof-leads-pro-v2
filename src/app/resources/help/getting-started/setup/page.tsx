@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, Lock, User, MapPin } from 'lucide-react'
+import { ArrowRight, CheckCircle2, User, MapPin } from 'lucide-react'
 
 const steps = [
   {
