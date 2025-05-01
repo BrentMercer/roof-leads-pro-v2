@@ -46,47 +46,6 @@ const navigation = {
   ],
 }
 
-const solutions = [
-  {
-    title: 'Lead Generation',
-    href: '/solutions/lead-generation',
-    description: 'Automatically identify and target homeowners who need new roofs'
-  },
-  {
-    title: 'Market Analysis',
-    href: '/solutions/market-analysis',
-    description: 'Get detailed insights into your target markets'
-  },
-  {
-    title: 'Workflow Automation',
-    href: '/solutions/workflow-automation',
-    description: 'Streamline your sales process with automated tools'
-  },
-  {
-    title: 'Data Security',
-    href: '/solutions/data-security',
-    description: 'Enterprise-grade protection for your data'
-  }
-]
-
-const resources = [
-  {
-    title: 'Blog',
-    href: '/blog',
-    description: 'Latest news and insights'
-  },
-  {
-    title: 'Help Center',
-    href: '/help',
-    description: 'Get support and answers'
-  },
-  {
-    title: 'Documentation',
-    href: '/docs',
-    description: 'Technical guides and API docs'
-  }
-]
-
 export function MainNav() {
   const pathname = usePathname()
 
