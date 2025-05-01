@@ -10,8 +10,7 @@ import {
   MapPinIcon, 
   SettingsIcon,
   LogOutIcon,
-  MenuIcon,
-  XIcon
+  MenuIcon
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { SessionTimeoutWarning } from '@/components/session/timeout-warning';
