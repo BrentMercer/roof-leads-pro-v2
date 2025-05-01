@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { XIcon, PlusIcon, TrashIcon } from 'lucide-react';
+import { PlusIcon, TrashIcon } from 'lucide-react';
 
 interface ZipCodeManagerProps {
   isOpen: boolean;
