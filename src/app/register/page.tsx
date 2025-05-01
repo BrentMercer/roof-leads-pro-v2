@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import type { ReCAPTCHAProps } from 'react-google-recaptcha';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 // Dynamically import ReCAPTCHA with no SSR
 const ReCAPTCHA = dynamic<ReCAPTCHAProps>(() => import('react-google-recaptcha'), {
@@ -24,6 +25,41 @@ declare global {
   }
 }
 
+// Add password strength meter component
+const PasswordStrengthMeter = ({ password }: { password: string }) => {
+  const getPasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    return strength;
+  };
+
+  const strength = getPasswordStrength(password);
+  const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
+  const strengthLabels = ['Very Weak', 'Weak', 'Medium', 'Strong', 'Very Strong'];
+
+  return (
+    <div className="mt-2">
+      <div className="flex gap-1 h-1">
+        {[1, 2, 3, 4, 5].map((level) => (
+          <div
+            key={level}
+            className={`flex-1 rounded-full ${
+              level <= strength ? strengthColors[strength - 1] : 'bg-gray-200'
+            }`}
+          />
+        ))}
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {password ? strengthLabels[strength - 1] : 'Enter a password'}
+      </p>
+    </div>
+  );
+};
+
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
@@ -33,7 +69,11 @@ const registerSchema = z.object({
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number')
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+  confirmPassword: z.string(),
   phone: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -45,6 +85,9 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -190,14 +233,62 @@ export default function RegisterPage() {
                 Password
               </label>
               <div className="mt-1">
-                <input
-                  id="password"
-                  type="password"
-                  {...register('password')}
-                  className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    {...register('password')}
+                    onChange={(e) => {
+                      register('password').onChange(e);
+                      setPassword(e.target.value);
+                    }}
+                    className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center"
+                  >
+                    {showPassword ? (
+                      <FaEyeSlash className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    ) : (
+                      <FaEye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    )}
+                  </button>
+                </div>
+                <PasswordStrengthMeter password={password} />
                 {errors.password && (
                   <p className="mt-1 text-sm text-destructive">{errors.password.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground">
+                Confirm Password
+              </label>
+              <div className="mt-1">
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    {...register('confirmPassword')}
+                    className="appearance-none block w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center"
+                  >
+                    {showConfirmPassword ? (
+                      <FaEyeSlash className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    ) : (
+                      <FaEye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-destructive">{errors.confirmPassword.message}</p>
                 )}
               </div>
             </div>
