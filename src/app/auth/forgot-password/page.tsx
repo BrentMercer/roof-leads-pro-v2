@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 
 const forgotPasswordSchema = z.object({
@@ -19,7 +20,8 @@ type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
   const form = useForm<ForgotPasswordForm>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -30,6 +32,8 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(data: ForgotPasswordForm) {
     setIsLoading(true);
+    setError('');
+    setSuccess('');
     try {
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
@@ -41,18 +45,10 @@ export default function ForgotPasswordPage() {
         throw new Error('Failed to send reset email');
       }
 
-      toast({
-        title: 'Check your email',
-        description: 'If an account exists with that email, you will receive password reset instructions.',
-      });
-
+      setSuccess('If an account exists with that email, you will receive password reset instructions.');
       form.reset();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to send reset email. Please try again.',
-        variant: 'destructive',
-      });
+      setError('Failed to send reset email. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -68,6 +64,18 @@ export default function ForgotPasswordPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert className="mb-4">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
