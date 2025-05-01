@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import SubscriptionHistory, { SubscriptionAction, SubscriptionStatus } from './SubscriptionHistory';
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -48,9 +49,13 @@ const userSchema = new mongoose.Schema({
   },
   subscriptionStatus: {
     type: String,
-    enum: ['ACTIVE', 'INACTIVE', 'TRIAL'],
+    enum: ['ACTIVE', 'INACTIVE', 'TRIAL', 'CANCELLED', 'EXPIRED'],
     default: 'INACTIVE',
   },
+  subscriptionHistory: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubscriptionHistory',
+  }],
   assignedZipCodes: [{
     type: String,
     trim: true,
@@ -81,6 +86,80 @@ userSchema.pre('save', async function(next) {
 // Method to compare passwords
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Method to update subscription status and create history entry
+userSchema.methods.updateSubscriptionStatus = async function(
+  newStatus: SubscriptionStatus,
+  action: SubscriptionAction,
+  details: {
+    planDetails?: {
+      name: string;
+      price: number;
+      billingCycle: string;
+      zipCodeCount: number;
+    };
+    paymentDetails?: {
+      amount: number;
+      currency: string;
+      transactionId: string;
+      status: string;
+    };
+    zipCodeChanges?: {
+      added: string[];
+      removed: string[];
+    };
+    metadata?: Record<string, any>;
+  } = {}
+) {
+  const previousStatus = this.subscriptionStatus;
+  
+  // Create history entry
+  const historyEntry = await SubscriptionHistory.create({
+    userId: this._id,
+    action,
+    previousStatus,
+    newStatus,
+    ...details,
+  });
+
+  // Update user's subscription status
+  this.subscriptionStatus = newStatus;
+  this.subscriptionHistory.push(historyEntry._id);
+  await this.save();
+
+  return historyEntry;
+};
+
+// Method to update assigned zip codes
+userSchema.methods.updateZipCodes = async function(
+  added: string[] = [],
+  removed: string[] = []
+) {
+  // Remove specified zip codes
+  this.assignedZipCodes = this.assignedZipCodes.filter(
+    (zip: string) => !removed.includes(zip)
+  );
+  
+  // Add new zip codes
+  const newZipCodes = added.filter(
+    (zip: string) => !this.assignedZipCodes.includes(zip)
+  );
+  this.assignedZipCodes.push(...newZipCodes);
+
+  // Create history entry if there were changes
+  if (added.length > 0 || removed.length > 0) {
+    await this.updateSubscriptionStatus(
+      this.subscriptionStatus,
+      'ZIP_CODES_ADDED',
+      {
+        zipCodeChanges: { added, removed },
+      }
+    );
+  }
+
+  await this.save();
+  return this.assignedZipCodes;
 };
 
 // Create and export the model
