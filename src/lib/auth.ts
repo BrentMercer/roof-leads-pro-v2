@@ -102,6 +102,15 @@ export const authOptions: AuthOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // If the url is a relative url, prefix it with the base url
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      } else if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      return baseUrl + '/dashboard';
+    },
   },
   cookies: {
     sessionToken: {

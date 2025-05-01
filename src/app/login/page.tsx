@@ -84,7 +84,7 @@ export default function LoginPage() {
         throw new Error(result.error);
       }
 
-      router.push('/');
+      router.push('/dashboard');
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -125,7 +125,7 @@ export default function LoginPage() {
               type="button"
               variant="outline"
               className="w-full flex items-center justify-center gap-2"
-              onClick={() => signIn('google', { callbackUrl: '/' })}
+              onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
             >
               <FcGoogle className="h-5 w-5" />
               Continue with Google
