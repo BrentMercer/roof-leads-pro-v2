@@ -1,4 +1,4 @@
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SessionTimeoutWarning } from '../timeout-warning';
 import { useSession, signOut } from 'next-auth/react';
@@ -40,7 +40,7 @@ describe('SessionTimeoutWarning', () => {
     expect(screen.queryByText(/Session Expiring Soon/i)).not.toBeInTheDocument();
   });
 
-  it('should show warning when session is about to expire', async () => {
+  it('should show warning when session is about to expire', () => {
     // Set lastActivity to 26 minutes ago (4 minutes before expiry)
     const mockExpiredSession = {
       ...mockSession,
@@ -58,15 +58,10 @@ describe('SessionTimeoutWarning', () => {
       vi.advanceTimersByTime(30000);
     });
 
-    await waitFor(
-      () => {
-        expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-      },
-      { timeout: 10000 }
-    );
+    expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
   });
 
-  it('should auto-logout when countdown reaches zero', async () => {
+  it('should auto-logout when countdown reaches zero', () => {
     // Set lastActivity to 29.5 minutes ago (30 seconds before expiry)
     const mockNearExpirySession = {
       ...mockSession,
@@ -89,12 +84,7 @@ describe('SessionTimeoutWarning', () => {
       vi.advanceTimersByTime(30000);
     });
 
-    await waitFor(
-      () => {
-        expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
-      },
-      { timeout: 10000 }
-    );
+    expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
   });
 
   it('should extend session when clicking extend button', async () => {
@@ -114,18 +104,11 @@ describe('SessionTimeoutWarning', () => {
       vi.advanceTimersByTime(30000);
     });
 
-    await waitFor(
-      () => {
-        expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-      },
-      { timeout: 10000 }
-    );
+    expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
 
     // Click extend session button
     const extendButton = screen.getByText(/Extend Session/i);
-    await act(async () => {
-      await userEvent.click(extendButton);
-    });
+    await userEvent.click(extendButton);
 
     expect(mockSession.update).toHaveBeenCalled();
   });
@@ -147,18 +130,11 @@ describe('SessionTimeoutWarning', () => {
       vi.advanceTimersByTime(30000);
     });
 
-    await waitFor(
-      () => {
-        expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-      },
-      { timeout: 10000 }
-    );
+    expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
 
     // Click logout button
     const logoutButton = screen.getByText(/Logout Now/i);
-    await act(async () => {
-      await userEvent.click(logoutButton);
-    });
+    await userEvent.click(logoutButton);
 
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
   });

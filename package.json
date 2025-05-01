@@ -23,9 +23,8 @@
     "debug:env": "ts-node --project tsconfig.server.json -r tsconfig-paths/register src/scripts/debug-env.ts",
     "sync:scheduled": "ts-node --project tsconfig.server.json -r tsconfig-paths/register src/scripts/scheduled-sync.ts",
     "sync:full": "ts-node --project tsconfig.server.json -r tsconfig-paths/register src/scripts/scheduled-sync.ts full",
-    "test": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
