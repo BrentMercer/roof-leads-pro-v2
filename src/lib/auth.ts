@@ -29,38 +29,53 @@ export const authOptions: AuthOptions = {
         rememberMe: { label: "Remember Me", type: "checkbox" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password are required');
+        try {
+          console.log('[Auth] Attempting login for email:', credentials?.email);
+          
+          if (!credentials?.email || !credentials?.password) {
+            console.log('[Auth] Missing credentials');
+            throw new Error('Email and password are required');
+          }
+
+          await connectToDatabase();
+          const user = await User.findOne({ email: credentials.email });
+          
+          if (!user) {
+            console.log('[Auth] No user found for email:', credentials.email);
+            throw new Error('No user found with this email');
+          }
+
+          console.log('[Auth] Found user:', user.email);
+          console.log('[Auth] User email verified:', user.emailVerified);
+
+          if (!user.emailVerified) {
+            throw new Error('Please verify your email before logging in');
+          }
+
+          console.log('[Auth] Comparing passwords...');
+          const isValid = await bcrypt.compare(credentials.password, user.password);
+          console.log('[Auth] Password comparison result:', isValid);
+
+          if (!isValid) {
+            throw new Error('Invalid password');
+          }
+
+          // Update last login
+          user.last_login = new Date();
+          await user.save();
+          console.log('[Auth] Login successful for user:', user.email);
+
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            rememberMe: credentials.rememberMe === 'true'
+          };
+        } catch (error: any) {
+          console.error('[Auth] Login error:', error);
+          throw error;
         }
-
-        await connectToDatabase();
-        const user = await User.findOne({ email: credentials.email });
-
-        if (!user) {
-          throw new Error('No user found with this email');
-        }
-
-        if (!user.emailVerified) {
-          throw new Error('Please verify your email before logging in');
-        }
-
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-
-        if (!isValid) {
-          throw new Error('Invalid password');
-        }
-
-        // Update last login
-        user.last_login = new Date();
-        await user.save();
-
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          rememberMe: credentials.rememberMe === 'true'
-        };
       }
     })
   ],

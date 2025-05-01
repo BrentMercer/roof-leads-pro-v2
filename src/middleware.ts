@@ -1,8 +1,14 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
+import { authRateLimitMiddleware } from './middleware/auth-rate-limit';
 
 export default withAuth(
-  function middleware(req) {
+  async function middleware(req) {
+    // Apply rate limiting to auth endpoints
+    if (req.nextUrl.pathname.startsWith('/api/auth')) {
+      return authRateLimitMiddleware(req);
+    }
+
     return NextResponse.next();
   },
   {

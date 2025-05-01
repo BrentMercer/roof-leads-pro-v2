@@ -15,18 +15,24 @@ import {
 
 const WARNING_THRESHOLD = 5 * 60 * 1000; // 5 minutes before session expires
 const CHECK_INTERVAL = 30 * 1000; // Check every 30 seconds
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes (match with middleware)
+const DEFAULT_SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const REMEMBER_ME_SESSION_TIMEOUT = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export function SessionTimeoutWarning() {
   const { data: session, update: updateSession } = useSession();
   const [showWarning, setShowWarning] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
+  const getSessionTimeout = useCallback(() => {
+    return session?.user?.rememberMe ? REMEMBER_ME_SESSION_TIMEOUT : DEFAULT_SESSION_TIMEOUT;
+  }, [session?.user?.rememberMe]);
+
   const checkSessionExpiry = useCallback(() => {
     if (!session?.lastActivity) return;
 
+    const sessionTimeout = getSessionTimeout();
     const timeSinceLastActivity = Date.now() - session.lastActivity;
-    const timeUntilExpiry = SESSION_TIMEOUT - timeSinceLastActivity;
+    const timeUntilExpiry = sessionTimeout - timeSinceLastActivity;
 
     // If session has expired, log out immediately
     if (timeUntilExpiry <= 0) {
@@ -39,7 +45,7 @@ export function SessionTimeoutWarning() {
       setShowWarning(true);
       setCountdown(Math.floor(timeUntilExpiry / 1000));
     }
-  }, [session?.lastActivity]);
+  }, [session?.lastActivity, getSessionTimeout]);
 
   // Check session expiry periodically
   useEffect(() => {

@@ -13,6 +13,7 @@ import { FcGoogle } from 'react-icons/fc';
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+  rememberMe: z.boolean().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -77,6 +78,7 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
+        rememberMe: data.rememberMe,
         redirect: false,
       });
 
@@ -173,6 +175,25 @@ export default function LoginPage() {
                 {errors.password && (
                   <p className="mt-1 text-sm text-destructive">{errors.password.message}</p>
                 )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  {...register('rememberMe')}
+                  className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
+                />
+                <label htmlFor="rememberMe" className="ml-2 block text-sm text-foreground">
+                  Remember me
+                </label>
+              </div>
+              <div className="text-sm">
+                <Link href="/forgot-password" className="font-medium text-primary hover:text-primary/90">
+                  Forgot your password?
+                </Link>
               </div>
             </div>
 

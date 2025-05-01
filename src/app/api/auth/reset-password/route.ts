@@ -1,63 +1,64 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import User from '@/models/User';
 import { connectToDatabase } from '@/lib/mongodb';
+import User from '@/models/User';
+import bcrypt from 'bcryptjs';
+import { passwordResetRateLimit } from '@/lib/rate-limit';
 
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Reset token is required'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const { token, password } = resetPasswordSchema.parse(body);
+    const { token, password } = await request.json();
+    console.log('[Password Reset] Processing reset request for token:', token);
+    console.log('[Password Reset] New password received:', password);
 
+    // Check rate limit
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+    const { success, reset } = await passwordResetRateLimit.limit(ip);
+
+    if (!success) {
+      console.log('[Password Reset] Rate limit exceeded for IP:', ip);
+      return NextResponse.json(
+        {
+          message: `Too many requests. Please try again in ${Math.ceil((reset - Date.now()) / 1000)} seconds.`,
+        },
+        { status: 429 }
+      );
+    }
+
+    // Connect to database
     await connectToDatabase();
 
-    // Find user by reset token and check if it's still valid
+    // Find user with matching reset token
     const user = await User.findOne({
       resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() }
+      resetPasswordExpires: { $gt: new Date() },
     });
 
     if (!user) {
+      console.log('[Password Reset] Invalid or expired token:', token);
       return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
+        { message: 'Invalid or expired password reset token' },
         { status: 400 }
       );
     }
 
-    // Update password and clear reset token fields
-    user.password = password;
+    console.log('[Password Reset] Found user:', user.email);
+    console.log('[Password Reset] Current hashed password:', user.password);
+
+    // Update user's password and clear reset token
+    user.password = password; // Set the plain password, let the pre-save hook handle hashing
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
-
-    return NextResponse.json({
-      message: 'Password has been reset successfully',
-    });
-  } catch (error) {
-    console.error('Password reset error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
+    console.log('[Password Reset] Password updated successfully for user:', user.email);
 
     return NextResponse.json(
-      { error: 'An error occurred while resetting your password' },
+      { message: 'Password reset successfully' },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error('[Password Reset] Error:', error);
+    return NextResponse.json(
+      { message: 'Failed to reset password' },
       { status: 500 }
     );
   }
