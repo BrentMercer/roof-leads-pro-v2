@@ -14,6 +14,7 @@ import {
   XIcon
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { SessionTimeoutWarning } from '@/components/session/timeout-warning';
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: HomeIcon },
@@ -33,6 +34,8 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
+      <SessionTimeoutWarning />
+      
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-40 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
