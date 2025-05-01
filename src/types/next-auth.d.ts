@@ -7,11 +7,14 @@ declare module 'next-auth' {
       id: string;
       role: string;
     } & DefaultSession['user'];
+    deviceId?: string;
+    lastActivity?: number;
   }
 
   interface User {
     id: string;
     role: string;
+    rememberMe?: boolean;
   }
 }
 
@@ -19,5 +22,9 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: string;
+    rememberMe?: boolean;
+    lastActivity?: number;
+    deviceId?: string;
+    sessionTimeout?: number;
   }
 } 

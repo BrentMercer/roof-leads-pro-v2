@@ -5,6 +5,7 @@ import { getMongoDBAdapter } from './mongodb-adapter';
 import { connectToDatabase } from './mongodb';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 
 export const authOptions: AuthOptions = {
   adapter: getMongoDBAdapter(),
@@ -24,7 +25,8 @@ export const authOptions: AuthOptions = {
       name: 'Credentials',
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember Me", type: "checkbox" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -48,11 +50,16 @@ export const authOptions: AuthOptions = {
           throw new Error('Invalid password');
         }
 
+        // Update last login
+        user.last_login = new Date();
+        await user.save();
+
         return {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
+          rememberMe: credentials.rememberMe === 'true'
         };
       }
     })
@@ -66,20 +73,46 @@ export const authOptions: AuthOptions = {
     error: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.rememberMe = user.rememberMe;
+        token.lastActivity = Date.now();
+        
+        // Generate device ID for new sessions
+        if (trigger === 'signIn') {
+          token.deviceId = uuidv4();
+        }
       }
+      
+      // Update last activity on each request
+      if (token) {
+        token.lastActivity = Date.now();
+      }
+      
       return token;
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.deviceId = token.deviceId;
+        session.lastActivity = token.lastActivity;
       }
       return session;
     },
+  },
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
   },
   secret: process.env.NEXTAUTH_SECRET,
 }; 

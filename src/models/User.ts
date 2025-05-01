@@ -66,6 +66,20 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  // Session Management Fields
+  activeSessions: [{
+    deviceId: String,
+    deviceInfo: {
+      browser: String,
+      os: String,
+      ip: String,
+      lastActivity: Date
+    },
+    createdAt: Date,
+    expiresAt: Date
+  }],
+  rememberMe: { type: Boolean, default: false },
+  sessionTimeout: { type: Number, default: 30 * 60 * 1000 } // 30 minutes default
 }, {
   timestamps: true,
 });
