@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowRight, Shield, Lock, Key, EyeOff, Server } from 'lucide-react'
+import { Shield, Lock, Key, EyeOff, Server } from 'lucide-react'
 import { SiteHeader } from '@/components/site-header'
 
 const features = [
@@ -131,7 +131,6 @@ export default function DataSecurityPage() {
             <Button size="lg" asChild>
               <Link href="/register">
                 Start Free Trial
-                <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>

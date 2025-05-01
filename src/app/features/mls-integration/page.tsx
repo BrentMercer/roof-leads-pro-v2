@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowRight, Database, RefreshCw, Shield, Search } from 'lucide-react'
+import { Database, RefreshCw, Shield, Search } from 'lucide-react'
 
 export default function MLSIntegrationPage() {
   return (
@@ -102,7 +102,6 @@ export default function MLSIntegrationPage() {
         <Button size="lg" asChild>
           <Link href="/register">
             Start Integration
-            <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
       </div>

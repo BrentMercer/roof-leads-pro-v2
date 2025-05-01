@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowRight, Target, Zap, Shield, BarChart } from 'lucide-react'
+import { Target, Zap, Shield, BarChart } from 'lucide-react'
 import { SiteHeader } from '@/components/site-header'
 
 const solutions = [
@@ -72,7 +72,6 @@ export default function SolutionsPage() {
                       <Button variant="link" className="p-0 h-auto" asChild>
                         <Link href={solution.href}>
                           Learn more
-                          <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
                     </div>
@@ -95,7 +94,6 @@ export default function SolutionsPage() {
             <Button size="lg" asChild>
               <Link href="/register">
                 Start Free Trial
-                <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>

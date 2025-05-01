@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowRight, List, Filter, Bell, BarChart } from 'lucide-react'
+import { List, Filter, Bell, BarChart } from 'lucide-react'
 
 export default function LeadManagementPage() {
   return (
@@ -97,7 +97,6 @@ export default function LeadManagementPage() {
         <Button size="lg" asChild>
           <Link href="/register">
             Get Started
-            <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
       </div>

@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowRight, Search, BookOpen, MessageSquare, Mail } from 'lucide-react'
+import { Search, BookOpen, MessageSquare, Mail } from 'lucide-react'
 
 const categories = [
   {
