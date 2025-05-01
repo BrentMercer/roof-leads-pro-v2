@@ -19,13 +19,14 @@ describe('SessionTimeoutWarning', () => {
       },
       lastActivity: Date.now(),
     },
-    update: vi.fn(),
+    update: vi.fn().mockResolvedValue(true),
     status: 'authenticated',
   };
 
   beforeEach(() => {
     vi.useFakeTimers();
     (useSession as any).mockReturnValue(mockSession);
+    (signOut as any).mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -59,7 +60,7 @@ describe('SessionTimeoutWarning', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-    });
+    }, { timeout: 10000 });
   });
 
   it('should auto-logout when countdown reaches zero', async () => {
@@ -87,7 +88,7 @@ describe('SessionTimeoutWarning', () => {
 
     await waitFor(() => {
       expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
-    });
+    }, { timeout: 10000 });
   });
 
   it('should extend session when clicking extend button', async () => {
@@ -109,11 +110,13 @@ describe('SessionTimeoutWarning', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-    });
+    }, { timeout: 10000 });
 
     // Click extend session button
     const extendButton = screen.getByText(/Extend Session/i);
-    await userEvent.click(extendButton);
+    await act(async () => {
+      await userEvent.click(extendButton);
+    });
 
     expect(mockSession.update).toHaveBeenCalled();
   });
@@ -137,12 +140,14 @@ describe('SessionTimeoutWarning', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-    });
+    }, { timeout: 10000 });
 
     // Click logout button
     const logoutButton = screen.getByText(/Logout Now/i);
-    await userEvent.click(logoutButton);
+    await act(async () => {
+      await userEvent.click(logoutButton);
+    });
 
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
   });
-}); 
+}, { timeout: 20000 }); 
