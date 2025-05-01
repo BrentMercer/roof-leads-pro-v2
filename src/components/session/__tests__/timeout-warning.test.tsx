@@ -24,7 +24,7 @@ describe('SessionTimeoutWarning', () => {
   };
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     (useSession as any).mockReturnValue(mockSession);
     (signOut as any).mockResolvedValue(true);
   });
@@ -52,42 +52,26 @@ describe('SessionTimeoutWarning', () => {
     (useSession as any).mockReturnValue(mockExpiredSession);
 
     render(<SessionTimeoutWarning />);
-
-    // Fast-forward 30 seconds for the check interval
-    act(() => {
-      vi.advanceTimersByTime(30000);
-    });
-
     expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
   });
 
-  it('should auto-logout when countdown reaches zero', () => {
-    // Set lastActivity to 29.5 minutes ago (30 seconds before expiry)
-    const mockNearExpirySession = {
+  it('should auto-logout when session has expired', () => {
+    // Set lastActivity to 31 minutes ago (1 minute past expiry)
+    const mockExpiredSession = {
       ...mockSession,
       data: {
         ...mockSession.data,
-        lastActivity: Date.now() - 29.5 * 60 * 1000,
+        lastActivity: Date.now() - 31 * 60 * 1000,
       },
     };
-    (useSession as any).mockReturnValue(mockNearExpirySession);
+    (useSession as any).mockReturnValue(mockExpiredSession);
 
     render(<SessionTimeoutWarning />);
-
-    // Fast-forward 30 seconds for the check interval
-    act(() => {
-      vi.advanceTimersByTime(30000);
-    });
-
-    // Fast-forward remaining time
-    act(() => {
-      vi.advanceTimersByTime(30000);
-    });
-
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
   });
 
   it('should extend session when clicking extend button', async () => {
+    const user = userEvent.setup({ delay: null });
     const mockNearExpirySession = {
       ...mockSession,
       data: {
@@ -98,22 +82,18 @@ describe('SessionTimeoutWarning', () => {
     (useSession as any).mockReturnValue(mockNearExpirySession);
 
     render(<SessionTimeoutWarning />);
-
-    // Fast-forward 30 seconds for the check interval
-    act(() => {
-      vi.advanceTimersByTime(30000);
-    });
-
     expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
 
     // Click extend session button
     const extendButton = screen.getByText(/Extend Session/i);
-    await userEvent.click(extendButton);
+    await user.click(extendButton);
 
     expect(mockSession.update).toHaveBeenCalled();
+    expect(screen.queryByText(/Session Expiring Soon/i)).not.toBeInTheDocument();
   });
 
   it('should logout when clicking logout button', async () => {
+    const user = userEvent.setup({ delay: null });
     const mockNearExpirySession = {
       ...mockSession,
       data: {
@@ -124,17 +104,11 @@ describe('SessionTimeoutWarning', () => {
     (useSession as any).mockReturnValue(mockNearExpirySession);
 
     render(<SessionTimeoutWarning />);
-
-    // Fast-forward 30 seconds for the check interval
-    act(() => {
-      vi.advanceTimersByTime(30000);
-    });
-
     expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
 
     // Click logout button
     const logoutButton = screen.getByText(/Logout Now/i);
-    await userEvent.click(logoutButton);
+    await user.click(logoutButton);
 
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
   });

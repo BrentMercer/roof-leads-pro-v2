@@ -15,6 +15,7 @@ import {
 
 const WARNING_THRESHOLD = 5 * 60 * 1000; // 5 minutes before session expires
 const CHECK_INTERVAL = 30 * 1000; // Check every 30 seconds
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes (match with middleware)
 
 export function SessionTimeoutWarning() {
   const { data: session, update: updateSession } = useSession();
@@ -24,37 +25,46 @@ export function SessionTimeoutWarning() {
   const checkSessionExpiry = useCallback(() => {
     if (!session?.lastActivity) return;
 
-    const sessionTimeout = 30 * 60 * 1000; // 30 minutes (match with middleware)
     const timeSinceLastActivity = Date.now() - session.lastActivity;
-    const timeUntilExpiry = sessionTimeout - timeSinceLastActivity;
+    const timeUntilExpiry = SESSION_TIMEOUT - timeSinceLastActivity;
 
+    // If session has expired, log out immediately
+    if (timeUntilExpiry <= 0) {
+      signOut({ callbackUrl: '/login' });
+      return;
+    }
+
+    // If within warning threshold, show warning
     if (timeUntilExpiry <= WARNING_THRESHOLD) {
       setShowWarning(true);
       setCountdown(Math.floor(timeUntilExpiry / 1000));
     }
   }, [session?.lastActivity]);
 
+  // Check session expiry periodically
   useEffect(() => {
+    checkSessionExpiry(); // Check immediately
     const intervalId = setInterval(checkSessionExpiry, CHECK_INTERVAL);
     return () => clearInterval(intervalId);
   }, [checkSessionExpiry]);
 
+  // Handle countdown display
   useEffect(() => {
-    if (countdown > 0 && showWarning) {
-      const countdownId = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownId);
-            signOut({ callbackUrl: '/login' });
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (!showWarning || countdown <= 0) return;
 
-      return () => clearInterval(countdownId);
-    }
-  }, [countdown, showWarning]);
+    const countdownId = setInterval(() => {
+      setCountdown(prev => {
+        const next = prev - 1;
+        if (next <= 0) {
+          clearInterval(countdownId);
+          signOut({ callbackUrl: '/login' });
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdownId);
+  }, [showWarning, countdown]);
 
   const handleExtendSession = async () => {
     try {
