@@ -58,9 +58,12 @@ describe('SessionTimeoutWarning', () => {
       vi.advanceTimersByTime(30000);
     });
 
-    await waitFor(() => {
-      expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
   });
 
   it('should auto-logout when countdown reaches zero', async () => {
@@ -86,9 +89,12 @@ describe('SessionTimeoutWarning', () => {
       vi.advanceTimersByTime(30000);
     });
 
-    await waitFor(() => {
-      expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
+      },
+      { timeout: 10000 }
+    );
   });
 
   it('should extend session when clicking extend button', async () => {
@@ -108,9 +114,12 @@ describe('SessionTimeoutWarning', () => {
       vi.advanceTimersByTime(30000);
     });
 
-    await waitFor(() => {
-      expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Click extend session button
     const extendButton = screen.getByText(/Extend Session/i);
@@ -138,9 +147,12 @@ describe('SessionTimeoutWarning', () => {
       vi.advanceTimersByTime(30000);
     });
 
-    await waitFor(() => {
-      expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Session Expiring Soon/i)).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Click logout button
     const logoutButton = screen.getByText(/Logout Now/i);
@@ -150,4 +162,4 @@ describe('SessionTimeoutWarning', () => {
 
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
   });
-}, { timeout: 20000 }); 
+}); 
