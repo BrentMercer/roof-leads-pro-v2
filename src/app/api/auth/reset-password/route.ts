@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
-import bcrypt from 'bcryptjs';
 import { passwordResetRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
