@@ -4,7 +4,6 @@ import User from '@/models/User';
 import { generateTokenWithExpiry } from '@/lib/tokens';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { passwordResetRateLimit } from '@/lib/rate-limit';
-import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = 'force-dynamic';
 

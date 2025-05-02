@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 import { passwordResetRateLimit } from '@/lib/rate-limit';
-import bcrypt from 'bcryptjs';
 
 export const dynamic = 'force-dynamic';
 
