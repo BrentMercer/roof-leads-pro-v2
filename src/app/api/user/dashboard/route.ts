@@ -5,6 +5,8 @@ import User from '@/models/User';
 import SubscriptionHistory from '@/models/SubscriptionHistory';
 import { connectToDatabase } from '@/lib/mongodb';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);

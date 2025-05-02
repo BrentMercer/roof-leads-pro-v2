@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
+import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import { generateTokenWithExpiry } from '@/lib/tokens';
 import { sendVerificationEmail } from '@/lib/email';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
