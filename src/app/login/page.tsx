@@ -143,24 +143,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Demo Admin Login */}
-          <div className="mb-6 p-4 border border-dashed border-yellow-500 rounded-lg">
-            <h3 className="text-sm font-medium text-yellow-500 mb-2">Demo Admin Access</h3>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => signIn('demo-admin', { 
-                email: 'demo@roofleadspro.com',
-                password: 'Test123!@#',
-                callbackUrl: '/dashboard'
-              })}
-            >
-              Login as Demo Admin
-            </Button>
-          </div>
-
-          <form className="space-y-6" onSubmit={handleSubmit(handleLogin)}>
+          <form onSubmit={handleSubmit(handleLogin)} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-foreground">
                 Email address

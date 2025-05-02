@@ -22,25 +22,6 @@ export const authOptions: AuthOptions = {
       }
     }),
     CredentialsProvider({
-      name: 'Demo Admin',
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        if (credentials?.email === 'demo@roofleadspro.com' && 
-            credentials?.password === 'Test123!@#') {
-          return {
-            id: 'demo-admin',
-            email: 'demo@roofleadspro.com',
-            name: 'Demo Admin',
-            role: 'admin'
-          };
-        }
-        return null;
-      }
-    }),
-    CredentialsProvider({
       name: 'Credentials',
       credentials: {
         email: { label: "Email", type: "email" },
@@ -54,6 +35,19 @@ export const authOptions: AuthOptions = {
           if (!credentials?.email || !credentials?.password) {
             console.log('[Auth] Missing credentials');
             throw new Error('Email and password are required');
+          }
+
+          // Check for demo admin credentials first
+          if (credentials.email === 'demo@roofleadspro.com' && 
+              credentials.password === 'Test123!@#') {
+            console.log('[Auth] Demo admin login successful');
+            return {
+              id: 'demo-admin',
+              email: 'demo@roofleadspro.com',
+              name: 'Demo Admin',
+              role: 'admin',
+              emailVerified: true
+            };
           }
 
           await connectToDatabase();
