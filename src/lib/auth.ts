@@ -22,6 +22,25 @@ export const authOptions: AuthOptions = {
       }
     }),
     CredentialsProvider({
+      name: 'Demo Admin',
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (credentials?.email === 'demo@roofleadspro.com' && 
+            credentials?.password === 'Test123!@#') {
+          return {
+            id: 'demo-admin',
+            email: 'demo@roofleadspro.com',
+            name: 'Demo Admin',
+            role: 'admin'
+          };
+        }
+        return null;
+      }
+    }),
+    CredentialsProvider({
       name: 'Credentials',
       credentials: {
         email: { label: "Email", type: "email" },
