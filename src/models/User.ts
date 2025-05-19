@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import SubscriptionHistory, { SubscriptionAction, SubscriptionStatus } from './SubscriptionHistory';
+import Account from './Account';
+import Transaction from './Transaction';
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -107,6 +109,81 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+// Method to create or update account
+userSchema.methods.createOrUpdateAccount = async function(accountData: {
+  organization?: {
+    name?: string;
+    type?: 'INDIVIDUAL' | 'BUSINESS' | 'ENTERPRISE';
+    taxId?: string;
+    website?: string;
+  };
+  billing?: {
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      country?: string;
+    };
+    contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+  };
+  preferences?: {
+    emailNotifications?: boolean;
+    smsNotifications?: boolean;
+    timezone?: string;
+    language?: string;
+  };
+}) {
+  if (this.account) {
+    // Update existing account
+    const account = await Account.findByIdAndUpdate(
+      this.account,
+      { $set: accountData },
+      { new: true }
+    );
+    return account;
+  } else {
+    // Create new account
+    const account = await Account.create({
+      userId: this._id,
+      ...accountData,
+    });
+    this.account = account._id;
+    await this.save();
+    return account;
+  }
+};
+
+// Method to create transaction
+userSchema.methods.createTransaction = async function(transactionData: {
+  type: 'SUBSCRIPTION' | 'ZIP_CODE_PURCHASE' | 'REFUND' | 'ADJUSTMENT';
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
+  amount: number;
+  currency?: string;
+  paymentMethod: {
+    type: 'CREDIT_CARD' | 'BANK_TRANSFER' | 'PAYPAL';
+    last4?: string;
+    brand?: string;
+    expiryMonth?: number;
+    expiryYear?: number;
+  };
+  billingCycle: 'MONTHLY' | 'ANNUAL';
+  description?: string;
+}) {
+  const transaction = await Transaction.create({
+    userId: this._id,
+    accountId: this.account,
+    ...transactionData,
+  });
+  
+  this.transactions.push(transaction._id);
+  await this.save();
+  
+  return transaction;
+};
+
 // Method to update subscription status and create history entry
 userSchema.methods.updateSubscriptionStatus = async function(
   newStatus: SubscriptionStatus,
@@ -141,6 +218,21 @@ userSchema.methods.updateSubscriptionStatus = async function(
     newStatus,
     ...details,
   });
+
+  // Create transaction if payment details are provided
+  if (details.paymentDetails) {
+    await this.createTransaction({
+      type: 'SUBSCRIPTION',
+      status: details.paymentDetails.status === 'success' ? 'COMPLETED' : 'FAILED',
+      amount: details.paymentDetails.amount,
+      currency: details.paymentDetails.currency,
+      paymentMethod: {
+        type: 'CREDIT_CARD', // Default to credit card, can be updated based on actual payment method
+      },
+      billingCycle: details.planDetails?.billingCycle === 'annual' ? 'ANNUAL' : 'MONTHLY',
+      description: `${action} - ${details.planDetails?.name || 'Subscription'}`,
+    });
+  }
 
   // Update user's subscription status
   this.subscriptionStatus = newStatus;
