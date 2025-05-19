@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   try {
     const session = await getServerSession();
     if (!session || session.user.role !== 'ADMIN') {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -27,10 +27,13 @@ export async function GET(request: Request) {
     if (search) {
       query.$or = [
         { mlsId: { $regex: search, $options: 'i' } },
-        { 'propertyAddress.street': { $regex: search, $options: 'i' } },
-        { 'propertyAddress.city': { $regex: search, $options: 'i' } },
+        { address: { $regex: search, $options: 'i' } },
       ];
     }
+
+    // Get total count for pagination
+    const total = await Lead.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
 
     // Get leads with pagination
     const leads = await Lead.find(query)
@@ -39,19 +42,19 @@ export async function GET(request: Request) {
       .skip(skip)
       .limit(limit);
 
-    // Get total count for pagination
-    const total = await Lead.countDocuments(query);
-
     return NextResponse.json({
       leads,
       pagination: {
         total,
-        pages: Math.ceil(total / limit),
-        current: page,
+        totalPages,
+        currentPage: page,
       },
     });
   } catch (error) {
     console.error('Error fetching leads:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 } 

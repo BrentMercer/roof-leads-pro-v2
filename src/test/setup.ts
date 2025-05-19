@@ -26,16 +26,21 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Mock next-auth
+vi.mock('next-auth', () => ({
+  getServerSession: vi.fn(),
+}));
+
 // Connect to the test database before all tests
 beforeAll(async () => {
-  await connectToDatabase();
+  await mongoose.connect(process.env.MONGODB_URI || '');
 });
 
 // Clear all collections after each test
 afterEach(async () => {
-  const collections = mongoose.connection.collections;
-  for (const key in collections) {
-    await collections[key].deleteMany({});
+  const collections = await mongoose.connection.db.collections();
+  for (const collection of collections) {
+    await collection.deleteMany({});
   }
 });
 

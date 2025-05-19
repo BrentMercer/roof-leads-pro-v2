@@ -18,56 +18,101 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+
+interface Lead {
+  _id: string;
+  mlsId: string;
+  address: string;
+  status: string;
+  assignedTo?: {
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+}
+
+interface Pagination {
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}
 
 export function LeadsTable() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-
-  useEffect(() => {
-    fetchLeads();
-  }, [page, statusFilter, searchTerm]);
+  const [status, setStatus] = useState('all');
+  const [search, setSearch] = useState('');
+  const [pagination, setPagination] = useState<Pagination>({
+    total: 0,
+    totalPages: 1,
+    currentPage: 1,
+  });
 
   const fetchLeads = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const response = await fetch(
-        `/api/admin/leads?page=${page}&status=${statusFilter}&search=${searchTerm}`
+        `/api/admin/leads?page=${page}&status=${status}&search=${search}`
       );
+      if (!response.ok) {
+        throw new Error('Failed to fetch leads');
+      }
       const data = await response.json();
-      setLeads(data.leads);
-      setTotalPages(data.pagination.pages);
-    } catch (error) {
-      console.error('Error fetching leads:', error);
+      setLeads(data.leads || []);
+      setPagination(data.pagination || {
+        total: 0,
+        totalPages: 1,
+        currentPage: 1,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching leads');
+      setLeads([]);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchLeads();
+  }, [page, status, search]);
+
+  const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'new':
+        return 'default';
+      case 'assigned':
+        return 'secondary';
+      case 'contacted':
+        return 'outline';
+      case 'closed':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
+
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Search leads by MLS ID or address..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Input
+          placeholder="Search leads..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+        <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="new">New</SelectItem>
+            <SelectItem value="assigned">Assigned</SelectItem>
             <SelectItem value="contacted">Contacted</SelectItem>
-            <SelectItem value="qualified">Qualified</SelectItem>
-            <SelectItem value="converted">Converted</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -81,54 +126,44 @@ export function LeadsTable() {
               <TableHead>Status</TableHead>
               <TableHead>Assigned To</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                  </div>
+                <TableCell colSpan={5} className="text-center py-8">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-red-500">
+                  {error}
                 </TableCell>
               </TableRow>
             ) : leads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                   No leads found
                 </TableCell>
               </TableRow>
             ) : (
-              leads.map((lead: any) => (
+              leads.map((lead) => (
                 <TableRow key={lead._id}>
-                  <TableCell className="font-medium">{lead.mlsId}</TableCell>
+                  <TableCell>{lead.mlsId}</TableCell>
+                  <TableCell>{lead.address}</TableCell>
                   <TableCell>
-                    {lead.propertyAddress.street}, {lead.propertyAddress.city}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        lead.status === 'NEW'
-                          ? 'bg-blue-100 text-blue-800'
-                          : lead.status === 'CONTACTED'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : lead.status === 'QUALIFIED'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
+                    <Badge variant={getStatusVariant(lead.status)}>
                       {lead.status}
-                    </span>
+                    </Badge>
                   </TableCell>
-                  <TableCell>{lead.assignedTo?.name || 'Unassigned'}</TableCell>
+                  <TableCell>
+                    {lead.assignedTo
+                      ? `${lead.assignedTo.name} (${lead.assignedTo.email})`
+                      : 'Unassigned'}
+                  </TableCell>
                   <TableCell>
                     {new Date(lead.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -137,24 +172,26 @@ export function LeadsTable() {
         </Table>
       </div>
 
-      <div className="flex justify-between items-center pt-4">
-        <Button
-          variant="outline"
-          onClick={() => setPage(page - 1)}
-          disabled={page === 1}
-        >
-          Previous
-        </Button>
-        <span className="text-sm text-gray-500">
-          Page {page} of {totalPages}
-        </span>
-        <Button
-          variant="outline"
-          onClick={() => setPage(page + 1)}
-          disabled={page >= totalPages}
-        >
-          Next
-        </Button>
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {leads.length} of {pagination.total} leads
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setPage(page + 1)}
+            disabled={page === pagination.totalPages}
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   );

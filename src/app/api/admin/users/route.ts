@@ -1,22 +1,25 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/mongodb';
-import { User } from '@/models/User';
+import User from '@/models/User';
 
 export async function GET(request: Request) {
   try {
     const session = await getServerSession();
-    if (!session || session.user?.role !== 'ADMIN') {
-      return new NextResponse('Unauthorized', { status: 401 });
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const status = searchParams.get('status') || 'all';
     const search = searchParams.get('search') || '';
+    const limit = 10;
+    const skip = (page - 1) * limit;
 
     await connectToDatabase();
 
+    // Build query
     const query: any = {};
     if (status !== 'all') {
       query.subscriptionStatus = status;
@@ -28,25 +31,30 @@ export async function GET(request: Request) {
       ];
     }
 
-    const limit = 10;
-    const skip = (page - 1) * limit;
+    // Get total count for pagination
+    const total = await User.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
 
-    const [users, total] = await Promise.all([
-      User.find(query)
-        .select('-password')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      User.countDocuments(query),
-    ]);
+    // Get users with pagination
+    const users = await User.find(query)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     return NextResponse.json({
       users,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      pagination: {
+        total,
+        totalPages,
+        currentPage: page,
+      },
     });
   } catch (error) {
     console.error('Error fetching users:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 } 

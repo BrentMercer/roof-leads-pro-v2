@@ -30,17 +30,24 @@ interface User {
   createdAt: string;
 }
 
+interface Pagination {
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}
+
 export function UsersTable() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-
-  useEffect(() => {
-    fetchUsers();
-  }, [page, search, status]);
+  const [search, setSearch] = useState('');
+  const [pagination, setPagination] = useState<Pagination>({
+    total: 0,
+    totalPages: 1,
+    currentPage: 1,
+  });
 
   const fetchUsers = async () => {
     try {
@@ -48,28 +55,43 @@ export function UsersTable() {
       const response = await fetch(
         `/api/admin/users?page=${page}&status=${status}&search=${search}`
       );
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
       const data = await response.json();
       setUsers(data.users);
-      setTotalPages(data.totalPages);
-    } catch (error) {
-      console.error('Error fetching users:', error);
+      setPagination(data.pagination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching users');
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
+  useEffect(() => {
+    fetchUsers();
+  }, [page, status, search]);
+
+  const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active':
-        return 'bg-green-500/10 text-green-500';
+        return 'default';
       case 'inactive':
-        return 'bg-red-500/10 text-red-500';
+        return 'destructive';
       case 'pending':
-        return 'bg-yellow-500/10 text-yellow-500';
+        return 'secondary';
       default:
-        return 'bg-gray-500/10 text-gray-500';
+        return 'outline';
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -106,63 +128,48 @@ export function UsersTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  Loading...
+            {users.map((user) => (
+              <TableRow key={user._id}>
+                <TableCell>{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell className="capitalize">{user.role}</TableCell>
+                <TableCell>
+                  <Badge variant={getStatusVariant(user.subscriptionStatus)}>
+                    {user.subscriptionStatus}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {user.assignedZipCodes?.join(', ') || 'None'}
+                </TableCell>
+                <TableCell>
+                  {new Date(user.createdAt).toLocaleDateString()}
                 </TableCell>
               </TableRow>
-            ) : users.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  No users found
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map((user) => (
-                <TableRow key={user._id}>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell className="capitalize">{user.role}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={getStatusColor(user.subscriptionStatus)}
-                    >
-                      {user.subscriptionStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {user.assignedZipCodes?.join(', ') || 'None'}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
 
       <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-        >
-          Previous
-        </Button>
-        <span className="text-sm text-muted-foreground">
-          Page {page} of {totalPages}
-        </span>
-        <Button
-          variant="outline"
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={page === totalPages}
-        >
-          Next
-        </Button>
+        <div className="text-sm text-muted-foreground">
+          Showing {users.length} of {pagination.total} users
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setPage(page + 1)}
+            disabled={page === pagination.totalPages}
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   );
