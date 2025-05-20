@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusIcon, CreditCardIcon } from 'lucide-react';
 import { PaymentForm } from '@/components/payment-form';
 import { StripeProvider } from '@/components/providers/stripe-provider';
 import { SUBSCRIPTION_PLANS } from '@/lib/stripe';

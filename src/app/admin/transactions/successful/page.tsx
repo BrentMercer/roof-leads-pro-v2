@@ -1,30 +1,24 @@
 'use client';
 
-import { Metadata } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const metadata: Metadata = {
-  title: 'Users Management | Roof Leads Pro',
-  description: 'Manage users and their subscriptions',
-};
-
-export default function UsersPage() {
+export default function SuccessfulTransactionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">All Users</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Successful Transactions</h1>
         <p className="text-muted-foreground">
-          View and manage all users in the system.
+          View and manage successful transactions in the system.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Users</CardTitle>
+          <CardTitle>Successful Transactions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">
-            Users table will be implemented here
+            Successful transactions table will be implemented here
           </div>
         </CardContent>
       </Card>

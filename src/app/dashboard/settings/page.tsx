@@ -1,8 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { UserIcon, LockIcon, BellIcon, WebhookIcon } from 'lucide-react';
+import { PaletteIcon, LayoutIcon, GlobeIcon, FilterIcon } from 'lucide-react';
 
 export default function SettingsPage() {
   return (
@@ -10,87 +9,104 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">
-          Manage your account settings and preferences.
+          Customize your dashboard and application preferences.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-6">
+        {/* Display Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>Profile Settings</CardTitle>
+            <div className="flex items-center space-x-2">
+              <LayoutIcon className="h-5 w-5" />
+              <CardTitle>Display Settings</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Name</p>
-              <p className="text-sm text-muted-foreground">John Doe</p>
+            <div className="text-sm text-muted-foreground">
+              <p>Customize how information is displayed in your dashboard.</p>
+              <p className="mt-2">Options will include:</p>
+              <ul className="list-disc list-inside mt-1">
+                <li>Default View (Cards/List/Map)</li>
+                <li>Items Per Page</li>
+                <li>Date Format</li>
+                <li>Time Zone</li>
+                <li>Default Sort Order</li>
+                <li>Column Visibility</li>
+              </ul>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Email</p>
-              <p className="text-sm text-muted-foreground">john@example.com</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Phone</p>
-              <p className="text-sm text-muted-foreground">Not set</p>
-            </div>
-            <Button variant="outline" className="w-full">
-              <UserIcon className="mr-2 h-4 w-4" />
-              Edit Profile
-            </Button>
           </CardContent>
         </Card>
 
+        {/* Theme & Appearance */}
         <Card>
           <CardHeader>
-            <CardTitle>Security</CardTitle>
+            <div className="flex items-center space-x-2">
+              <PaletteIcon className="h-5 w-5" />
+              <CardTitle>Theme & Appearance</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Password</p>
-              <p className="text-sm text-muted-foreground">Last changed 3 months ago</p>
+            <div className="text-sm text-muted-foreground">
+              <p>Customize the look and feel of your dashboard.</p>
+              <p className="mt-2">Settings will include:</p>
+              <ul className="list-disc list-inside mt-1">
+                <li>Color Theme</li>
+                <li>Dark/Light Mode</li>
+                <li>Font Size</li>
+                <li>Custom Branding</li>
+                <li>Dashboard Layout</li>
+              </ul>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Two-Factor Authentication</p>
-              <p className="text-sm text-muted-foreground">Not enabled</p>
+          </CardContent>
+        </Card>
+
+        {/* Data Preferences */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <FilterIcon className="h-5 w-5" />
+              <CardTitle>Data Preferences</CardTitle>
             </div>
-            <Button variant="outline" className="w-full">
-              <LockIcon className="mr-2 h-4 w-4" />
-              Update Security Settings
-            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              <p>Configure how data is filtered and displayed.</p>
+              <p className="mt-2">Options will include:</p>
+              <ul className="list-disc list-inside mt-1">
+                <li>Default Filters</li>
+                <li>Saved Views</li>
+                <li>Data Refresh Rate</li>
+                <li>Export Preferences</li>
+                <li>Custom Fields</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Regional Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <GlobeIcon className="h-5 w-5" />
+              <CardTitle>Regional Settings</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              <p>Configure regional and localization settings.</p>
+              <p className="mt-2">Settings will include:</p>
+              <ul className="list-disc list-inside mt-1">
+                <li>Language</li>
+                <li>Currency</li>
+                <li>Measurement Units</li>
+                <li>Date/Time Format</li>
+                <li>Regional Filters</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Notifications</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Email Notifications</p>
-            <p className="text-sm text-muted-foreground">Enabled for all updates</p>
-          </div>
-          <Button variant="outline" className="w-full">
-            <BellIcon className="mr-2 h-4 w-4" />
-            Configure Notifications
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lead Connector</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Webhook URL</p>
-            <p className="text-sm text-muted-foreground">Not configured</p>
-          </div>
-          <Button variant="outline" className="w-full">
-            <WebhookIcon className="mr-2 h-4 w-4" />
-            Configure Lead Connector
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 } 

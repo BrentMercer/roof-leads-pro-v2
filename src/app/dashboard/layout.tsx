@@ -6,21 +6,38 @@ import { usePathname } from 'next/navigation';
 import { 
   HomeIcon, 
   UserIcon, 
-  CreditCardIcon, 
   MapPinIcon, 
   SettingsIcon,
   LogOutIcon,
-  MenuIcon
+  MenuIcon,
+  BarChartIcon,
+  FileTextIcon,
+  BellIcon,
+  HelpCircleIcon,
+  UsersIcon,
+  MailIcon,
+  MapIcon
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { SessionTimeoutWarning } from '@/components/session/timeout-warning';
 
 const navigation = [
+  // Core Workflow
   { name: 'Overview', href: '/dashboard', icon: HomeIcon },
   { name: 'MLS Listings', href: '/dashboard/listings', icon: MapPinIcon },
-  { name: 'Subscription', href: '/dashboard/subscription', icon: CreditCardIcon },
+  { name: 'Leads', href: '/dashboard/leads', icon: UsersIcon },
+  { name: 'Outreach', href: '/dashboard/outreach', icon: MailIcon },
+  
+  // Coverage & Analysis
+  { name: 'Coverage', href: '/dashboard/coverage', icon: MapIcon },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChartIcon },
+  { name: 'Reports', href: '/dashboard/reports', icon: FileTextIcon },
+  
+  // Account & Settings
   { name: 'Account', href: '/dashboard/account', icon: UserIcon },
   { name: 'Settings', href: '/dashboard/settings', icon: SettingsIcon },
+  { name: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
+  { name: 'Help & Support', href: '/dashboard/help', icon: HelpCircleIcon },
 ];
 
 export default function DashboardLayout({
@@ -116,7 +133,7 @@ export default function DashboardLayout({
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col lg:pl-64">
+      <div className="lg:pl-64">
         <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-card lg:hidden">
           <button
             type="button"
