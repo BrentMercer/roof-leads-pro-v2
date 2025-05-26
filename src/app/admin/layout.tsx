@@ -21,16 +21,8 @@ const navigation = [
     title: 'Overview',
     items: [
       { title: 'Dashboard', href: '/admin/dashboard' },
-      { title: 'System Health', href: '/admin/system-health' },
-      { title: 'Audit Logs', href: '/admin/audit-logs' },
-    ],
-  },
-  {
-    title: 'User Management',
-    items: [
-      { title: 'Account Types', href: '/admin/account-types' },
-      { title: 'Admin Users', href: '/admin/admin-users' },
-      { title: 'User Activity', href: '/admin/user-activity' },
+      { title: 'Agents', href: '/admin/agents' },
+      { title: 'Transactions', href: '/admin/transactions' },
     ],
   },
   {
@@ -63,6 +55,14 @@ const navigation = [
       { title: 'Support Tickets', href: '/admin/support-tickets' },
       { title: 'Announcements', href: '/admin/announcements' },
       { title: 'Help & Docs', href: '/admin/help' },
+    ],
+  },
+  {
+    title: 'Admin Management',
+    items: [
+      { title: 'Admin Users', href: '/admin/admin-users' },
+      { title: 'System Health', href: '/admin/system-health' },
+      { title: 'Audit Logs', href: '/admin/audit-logs' },
     ],
   },
 ];
